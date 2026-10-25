@@ -21,7 +21,17 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rotas de API (suportando /api/ e sem /api/ no Vercel Serverless)
+// Normalizador de rotas Vercel Serverless
+app.use((req, res, next) => {
+  const matchParam = req.query?.match || req.query?.path;
+  if (matchParam && (req.url.startsWith('/api/index.js') || req.url.startsWith('/index.js') || req.path === '/' || req.path === '/api' || req.path === '/api/index.js')) {
+    const cleanPath = Array.isArray(matchParam) ? matchParam.join('/') : matchParam;
+    req.url = `/api/${cleanPath.replace(/^\/+/, '')}`;
+  }
+  next();
+});
+
+// Rotas de API
 app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/wallet', '/wallet'], walletRoutes);
 app.use(['/api/game', '/game'], gameRoutes);
