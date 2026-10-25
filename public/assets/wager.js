@@ -173,6 +173,23 @@
       const logErr = document.getElementById('login-error-msg');
       if (logErr) logErr.style.display = 'none';
 
+      // Máscara automática de telefone celular com DDD
+      const phoneInput = document.getElementById('reg-phone');
+      if (phoneInput && !phoneInput._maskBound) {
+        phoneInput._maskBound = true;
+        phoneInput.addEventListener('input', (e) => {
+          let v = e.target.value.replace(/\D/g, '');
+          if (v.length > 11) v = v.substring(0, 11);
+          if (v.length > 6) {
+            e.target.value = `(${v.substring(0, 2)}) ${v.substring(2, 7)}-${v.substring(7)}`;
+          } else if (v.length > 2) {
+            e.target.value = `(${v.substring(0, 2)}) ${v.substring(2)}`;
+          } else if (v.length > 0) {
+            e.target.value = `(${v}`;
+          }
+        });
+      }
+
       // Fecha outros modais se abertos
       const depModal = document.getElementById('deposit-modal');
       if (depModal) depModal.style.display = 'none';
@@ -296,22 +313,31 @@
     async handleRegister(e) {
       if (e) e.preventDefault();
       const usernameInput = document.getElementById('reg-username');
-      const emailInput = document.getElementById('reg-email');
       const phoneInput = document.getElementById('reg-phone');
+      const emailInput = document.getElementById('reg-email');
       const passInput = document.getElementById('reg-password');
       const passConfirmInput = document.getElementById('reg-password-confirm');
       const errEl = document.getElementById('reg-error-msg');
       const btn = document.getElementById('btn-submit-reg');
 
       const username = usernameInput?.value?.trim() || '';
-      const email = emailInput?.value?.trim() || '';
       const phone = phoneInput?.value?.trim() || '';
+      const email = emailInput?.value?.trim() || '';
       const password = passInput?.value || '';
       const confirm = passConfirmInput?.value || '';
 
       if (username.length < 3) {
         if (errEl) {
-          errEl.textContent = 'O nome de usuário deve ter pelo menos 3 caracteres.';
+          errEl.textContent = 'O nome de piloto deve ter pelo menos 3 caracteres.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        if (errEl) {
+          errEl.textContent = 'Informe um número de celular válido com DDD (mínimo 10 dígitos).';
           errEl.style.display = 'block';
         }
         return;
@@ -342,7 +368,7 @@
       try {
         const res = await this.api('/api/auth/register', {
           method: 'POST',
-          body: JSON.stringify({ username, email, phone, password })
+          body: JSON.stringify({ username, phone: cleanPhone, password, email })
         });
 
         this.token = res.token;
@@ -362,7 +388,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.textContent = '🏁 CRIAR CONTA E JOGAR';
+          btn.textContent = '🏁 CRIAR CONTA E ENTRAR';
         }
       }
     },

@@ -73,18 +73,21 @@ router.post('/guest', async (req, res) => {
   }
 });
 
-// Login
+// Login (Compatível com Usuário, E-mail ou Número de Celular)
 router.post('/login', async (req, res) => {
   try {
     const { login, password } = req.body;
     if (!login || !password) {
-      return res.status(400).json({ error: 'Informe login e senha.' });
+      return res.status(400).json({ error: 'Informe usuário/celular e senha.' });
     }
 
     const clean = String(login).trim().toLowerCase();
+    const cleanDigits = clean.replace(/\D/g, '');
+
     const user = store.users.find(u =>
       (u.username && u.username.toLowerCase() === clean) ||
-      (u.email && u.email.toLowerCase() === clean)
+      (u.email && u.email.toLowerCase() === clean) ||
+      (cleanDigits.length >= 10 && u.phone && u.phone.replace(/\D/g, '') === cleanDigits)
     );
 
     if (!user || !user.password_hash) {
@@ -108,6 +111,7 @@ router.post('/login', async (req, res) => {
         balance: user.balance || 0,
         cash_balance: user.cash_balance || 0,
         bonus_balance: user.bonus_balance || 0,
+        role: user.role || 'user',
         is_influencer: Boolean(user.is_influencer),
         is_guest: false
       }
@@ -117,37 +121,57 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Cadastro
+// Cadastro simplificado (Nome, Celular com DDD e Senha obrigatórios; E-mail opcional)
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, email, phone } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Preencha usuário e senha.' });
-    }
+    const { username, phone, password, email } = req.body;
 
+    // Validação de nome de piloto
+    if (!username) {
+      return res.status(400).json({ error: 'Informe o seu nome de piloto.' });
+    }
     const cleanUsername = String(username).trim();
     if (cleanUsername.length < 3) {
-      return res.status(400).json({ error: 'O nome de usuário deve ter no mínimo 3 caracteres.' });
+      return res.status(400).json({ error: 'O nome de piloto deve ter no mínimo 3 caracteres.' });
     }
 
-    if (password.length < 6) {
+    // Validação de telefone / celular com DDD
+    if (!phone) {
+      return res.status(400).json({ error: 'Informe o seu número de celular com DDD.' });
+    }
+    const cleanPhone = String(phone).replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      return res.status(400).json({ error: 'Informe um número de celular válido com DDD (mínimo 10 dígitos).' });
+    }
+
+    // Validação de senha
+    if (!password || password.length < 6) {
       return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
     }
 
+    // Unicidade de nome de piloto
     if (store.users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase())) {
       return res.status(400).json({ error: 'Este nome de piloto já está em uso.' });
     }
 
+    // Unicidade de número de celular
+    if (store.users.some(u => u.phone && u.phone.replace(/\D/g, '') === cleanPhone)) {
+      return res.status(400).json({ error: 'Este número de celular já está cadastrado em outra conta.' });
+    }
+
+    // Validação de e-mail (OPCIONAL)
     const cleanEmail = email ? String(email).trim().toLowerCase() : '';
-    if (cleanEmail && store.users.some(u => u.email && u.email.toLowerCase() === cleanEmail)) {
-      return res.status(400).json({ error: 'Este e-mail já está cadastrado em outra conta.' });
+    if (cleanEmail) {
+      if (store.users.some(u => u.email && u.email.toLowerCase() === cleanEmail)) {
+        return res.status(400).json({ error: 'Este e-mail já está cadastrado em outra conta.' });
+      }
     }
 
     const newUser = {
       id: uuid(),
       username: cleanUsername,
-      email: cleanEmail || `${cleanUsername.toLowerCase()}@player.local`,
-      phone: phone ? String(phone).replace(/\D/g, '') : '',
+      email: cleanEmail || '',
+      phone: cleanPhone,
       password_hash: await bcrypt.hash(password, 10),
       balance: 0,
       cash_balance: 0,
@@ -174,6 +198,7 @@ router.post('/register', async (req, res) => {
         balance: newUser.balance,
         cash_balance: newUser.cash_balance,
         bonus_balance: newUser.bonus_balance,
+        role: newUser.role,
         is_influencer: false,
         is_guest: false
       }

@@ -445,21 +445,16 @@
           </button>
         </div>
 
-        <!-- Formulário de Cadastro -->
+        <!-- Formulário de Cadastro (Apenas Nome, Celular e Senha obrigatórios; E-mail opcional) -->
         <form id="form-register" onsubmit="WagerEngine.handleRegister(event)">
           <div class="auth-input-group">
-            <label for="reg-username">NOME DE PILOTO (USUÁRIO):</label>
+            <label for="reg-username">NOME DE PILOTO (OBRIGATÓRIO):</label>
             <input type="text" id="reg-username" class="pix-code-input auth-input" placeholder="Ex: AyrtonSenna20" required minlength="3" autocomplete="username" />
           </div>
 
           <div class="auth-input-group">
-            <label for="reg-email">E-MAIL:</label>
-            <input type="email" id="reg-email" class="pix-code-input auth-input" placeholder="seuemail@exemplo.com" required autocomplete="email" />
-          </div>
-
-          <div class="auth-input-group">
-            <label for="reg-phone">WHATSAPP / CELULAR (OPCIONAL):</label>
-            <input type="tel" id="reg-phone" class="pix-code-input auth-input" placeholder="(11) 99999-9999" autocomplete="tel" />
+            <label for="reg-phone">NÚMERO DE CELULAR COM DDD (OBRIGATÓRIO):</label>
+            <input type="tel" id="reg-phone" class="pix-code-input auth-input" placeholder="(11) 99999-9999" required autocomplete="tel" />
           </div>
 
           <div class="auth-input-group">
@@ -470,6 +465,11 @@
           <div class="auth-input-group">
             <label for="reg-password-confirm">CONFIRMAR SENHA:</label>
             <input type="password" id="reg-password-confirm" class="pix-code-input auth-input" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
+          </div>
+
+          <div class="auth-input-group">
+            <label for="reg-email">E-MAIL (OPCIONAL):</label>
+            <input type="email" id="reg-email" class="pix-code-input auth-input" placeholder="seuemail@exemplo.com (opcional)" autocomplete="email" />
           </div>
 
           <div id="reg-error-msg" class="auth-error-msg" style="display: none;"></div>
@@ -483,11 +483,11 @@
           </div>
         </form>
 
-        <!-- Formulário de Login -->
+        <!-- Formulário de Login (Compatível com Usuário, Celular ou E-mail) -->
         <form id="form-login" onsubmit="WagerEngine.handleLogin(event)" style="display: none;">
           <div class="auth-input-group">
-            <label for="login-identity">USUÁRIO OU E-MAIL:</label>
-            <input type="text" id="login-identity" class="pix-code-input auth-input" placeholder="Seu nome de piloto ou e-mail" required autocomplete="username" />
+            <label for="login-identity">USUÁRIO, CELULAR OU E-MAIL:</label>
+            <input type="text" id="login-identity" class="pix-code-input auth-input" placeholder="Seu nome, celular ou e-mail" required autocomplete="username" />
           </div>
 
           <div class="auth-input-group">
