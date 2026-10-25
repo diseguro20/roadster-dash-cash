@@ -119,6 +119,188 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+/* ── Topbar Auth ── */
+.topbar-auth {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-auth-login {
+  background: rgba(26, 32, 48, 0.9);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-auth-login:hover {
+  background: rgba(40, 50, 75, 0.95);
+  border-color: #ffd166;
+  color: #fff;
+}
+
+.btn-auth-reg {
+  background: linear-gradient(135deg, #e82127 0%, #b8151a 100%);
+  color: #ffffff;
+  box-shadow: 0 0 12px var(--wager-red-glow);
+}
+
+.btn-auth-reg:hover {
+  filter: brightness(1.15);
+}
+
+.user-pill {
+  background: rgba(20, 24, 38, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-avatar {
+  font-size: 14px;
+}
+
+.user-name {
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 13px;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.influencer-badge {
+  background: linear-gradient(135deg, #ffd166, #f59e0b);
+  color: #000;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.btn-logout:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fff;
+}
+
+/* ── Auth Modals ── */
+.auth-card {
+  max-width: 420px;
+  width: 92%;
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.auth-input-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  margin-bottom: 12px;
+  gap: 5px;
+}
+
+.auth-input-group label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.auth-input {
+  background: rgba(14, 18, 28, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #fff;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.auth-input:focus {
+  border-color: #e82127;
+  box-shadow: 0 0 12px rgba(232, 33, 39, 0.35);
+}
+
+.auth-error-msg {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  color: #fca5a5;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin: 10px 0;
+  text-align: left;
+}
+
+.auth-switch-text {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.auth-switch-text a {
+  color: #ffd166;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.auth-switch-text a:hover {
+  text-decoration: underline;
+}
+
+.deposit-countdown {
+  font-family: monospace;
+  font-size: 13px;
+  color: #ffd166;
+  background: rgba(255, 209, 102, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.btn-verify-now {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+
+.btn-verify-now:hover {
+  background: rgba(16, 185, 129, 0.35);
+}
+
 /* ── Lobby Wagering Box ── */
 .wager-box {
   background: var(--wager-card-bg);
@@ -605,12 +787,16 @@
 }
 
 @media (max-width: 600px) {
-  #lobby-topbar { padding: 10px 12px; }
+  #lobby-topbar { padding: 8px 10px; gap: 6px; }
   .topbar-title { display: none; }
-  .balance-card { padding: 4px 8px; }
-  .balance-val { font-size: 14px; }
-  .btn-top { padding: 6px 10px; font-size: 11px; }
+  .topbar-badge { font-size: 10px; padding: 2px 6px; }
+  .balance-card { padding: 4px 7px; gap: 4px; }
+  .balance-label { display: none; }
+  .balance-val { font-size: 13.5px; }
+  .btn-top { padding: 6px 8px; font-size: 10.5px; gap: 4px; }
   .btn-cashout { padding: 14px 26px; font-size: 18px; }
   #btn-cashout-container { bottom: 65px; }
   .cashout-shortcut { display: none; }
+  .user-name { max-width: 70px; font-size: 12px; }
+  .auth-card { padding: 22px 18px; }
 }

@@ -25,6 +25,7 @@
     _lastHudUpdate: 0,
     _isStartingRace: false,
     _loadingFailsafe: null,
+    _pixCountdownTimer: null,
 
     formatBRL(cents) {
       const v = (Number(cents || 0) / 100);
@@ -66,6 +67,7 @@
       await this.loadUser();
       this.initBetControls();
       this.updateBalanceUI();
+      this.updateAuthUI();
     },
 
     async loadUser() {
@@ -81,14 +83,18 @@
           this.token = guest.token;
           localStorage.setItem('roadster_token', guest.token);
           this.user = guest.user;
+          this.user.is_guest = true;
         }
       } catch (err) {
-        console.warn('[WagerEngine] Sessão renovada.');
+        console.warn('[WagerEngine] Sessão renovada como piloto rápido.');
         try {
+          this.token = '';
+          localStorage.removeItem('roadster_token');
           const guest = await this.api('/api/auth/guest', { method: 'POST' });
           this.token = guest.token;
           localStorage.setItem('roadster_token', guest.token);
           this.user = guest.user;
+          this.user.is_guest = true;
         } catch (_) {}
       }
 
@@ -101,6 +107,216 @@
       }
 
       this.updateBalanceUI();
+      this.updateAuthUI();
+    },
+
+    updateAuthUI() {
+      const authBox = document.getElementById('topbar-auth');
+      if (!authBox) return;
+
+      const isRegistered = this.user && !this.user.is_guest;
+      if (isRegistered) {
+        authBox.innerHTML = `
+          <div class="user-pill">
+            <span class="user-avatar">🏎️</span>
+            <span class="user-name" title="${this.user.username}">${this.user.username}</span>
+            ${this.user.is_influencer ? '<span class="influencer-badge">⭐ INFLUENCER</span>' : ''}
+            <button class="btn-logout" title="Sair da conta" onclick="WagerEngine.logout()">SAIR</button>
+          </div>
+        `;
+      } else {
+        authBox.innerHTML = `
+          <button class="btn-top btn-auth-login" onclick="WagerEngine.openLoginModal()">
+            <span>👤</span> <span>ENTRAR</span>
+          </button>
+          <button class="btn-top btn-auth-reg" onclick="WagerEngine.openRegisterModal()">
+            <span>✨</span> <span>CRIAR CONTA</span>
+          </button>
+        `;
+      }
+
+      const pilotBtn = document.getElementById('pilot-name');
+      if (pilotBtn && this.user) {
+        pilotBtn.textContent = this.user.username + (this.user.is_guest ? ' (Convidado)' : '');
+      }
+    },
+
+    openLoginModal() {
+      const modal = document.getElementById('login-modal');
+      if (modal) modal.style.display = 'flex';
+      const regModal = document.getElementById('register-modal');
+      if (regModal) regModal.style.display = 'none';
+      const errEl = document.getElementById('login-error-msg');
+      if (errEl) errEl.style.display = 'none';
+    },
+
+    openRegisterModal() {
+      const modal = document.getElementById('register-modal');
+      if (modal) modal.style.display = 'flex';
+      const loginModal = document.getElementById('login-modal');
+      if (loginModal) loginModal.style.display = 'none';
+      const errEl = document.getElementById('reg-error-msg');
+      if (errEl) errEl.style.display = 'none';
+    },
+
+    closeAuthModals() {
+      const loginModal = document.getElementById('login-modal');
+      if (loginModal) loginModal.style.display = 'none';
+      const regModal = document.getElementById('register-modal');
+      if (regModal) regModal.style.display = 'none';
+    },
+
+    switchToRegister(e) {
+      if (e) e.preventDefault();
+      this.closeAuthModals();
+      this.openRegisterModal();
+    },
+
+    switchToLogin(e) {
+      if (e) e.preventDefault();
+      this.closeAuthModals();
+      this.openLoginModal();
+    },
+
+    async handleLogin(e) {
+      if (e) e.preventDefault();
+      const loginInput = document.getElementById('login-identity');
+      const passInput = document.getElementById('login-password');
+      const errEl = document.getElementById('login-error-msg');
+      const btn = document.getElementById('btn-submit-login');
+
+      if (!loginInput || !passInput) return;
+      const login = loginInput.value.trim();
+      const password = passInput.value;
+
+      if (!login || !password) {
+        if (errEl) {
+          errEl.textContent = 'Informe usuário e senha.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Entrando...';
+      }
+      if (errEl) errEl.style.display = 'none';
+
+      try {
+        const res = await this.api('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ login, password })
+        });
+
+        this.token = res.token;
+        localStorage.setItem('roadster_token', res.token);
+        this.user = res.user;
+        this.user.is_guest = false;
+
+        if (this.user.is_influencer) {
+          window.__isInfluencerActive = true;
+        } else {
+          window.__isInfluencerActive = false;
+        }
+
+        this.closeAuthModals();
+        this.updateBalanceUI();
+        this.updateAuthUI();
+        this.showToast(`👋 Bem-vindo de volta, ${this.user.username}!`);
+      } catch (err) {
+        if (errEl) {
+          errEl.textContent = err.message || 'Erro ao realizar login.';
+          errEl.style.display = 'block';
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🚀 ENTRAR NO ROADSTER';
+        }
+      }
+    },
+
+    async handleRegister(e) {
+      if (e) e.preventDefault();
+      const usernameInput = document.getElementById('reg-username');
+      const emailInput = document.getElementById('reg-email');
+      const phoneInput = document.getElementById('reg-phone');
+      const passInput = document.getElementById('reg-password');
+      const passConfirmInput = document.getElementById('reg-password-confirm');
+      const errEl = document.getElementById('reg-error-msg');
+      const btn = document.getElementById('btn-submit-reg');
+
+      const username = usernameInput?.value?.trim() || '';
+      const email = emailInput?.value?.trim() || '';
+      const phone = phoneInput?.value?.trim() || '';
+      const password = passInput?.value || '';
+      const confirm = passConfirmInput?.value || '';
+
+      if (username.length < 3) {
+        if (errEl) {
+          errEl.textContent = 'O nome de usuário deve ter pelo menos 3 caracteres.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      if (password.length < 6) {
+        if (errEl) {
+          errEl.textContent = 'A senha deve ter no mínimo 6 caracteres.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      if (password !== confirm) {
+        if (errEl) {
+          errEl.textContent = 'As senhas não coincidem!';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Criando conta...';
+      }
+      if (errEl) errEl.style.display = 'none';
+
+      try {
+        const res = await this.api('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ username, email, phone, password })
+        });
+
+        this.token = res.token;
+        localStorage.setItem('roadster_token', res.token);
+        this.user = res.user;
+        this.user.is_guest = false;
+
+        this.closeAuthModals();
+        this.updateBalanceUI();
+        this.updateAuthUI();
+        this.showToast(`🎉 Conta criada com sucesso! Boas corridas, ${this.user.username}!`);
+      } catch (err) {
+        if (errEl) {
+          errEl.textContent = err.message || 'Erro ao criar conta.';
+          errEl.style.display = 'block';
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🏁 CRIAR CONTA E JOGAR';
+        }
+      }
+    },
+
+    async logout() {
+      localStorage.removeItem('roadster_token');
+      this.token = '';
+      this.user = null;
+      await this.loadUser();
+      this.showToast('Você saiu da sua conta.');
     },
 
     updateBalanceUI() {
@@ -668,24 +884,24 @@
         <div class="wager-modal-card">
           <button class="modal-close-btn" onclick="document.getElementById('deposit-modal').style.display='none'">×</button>
           <div class="modal-heading">DEPOSITAR VIA PIX</div>
-          <div class="modal-sub">Crédito instantâneo via VizzionPay</div>
+          <div class="modal-sub">Crédito instantâneo e seguro via VizzionPay</div>
 
           <div class="promo-badge">
             <span style="font-size: 20px;">🎁</span>
             <div>
               <strong style="color: #ffd166; display: block;">+100% DE BÔNUS ATIVO!</strong>
-              <span style="font-size: 11px; color: #cbd5e1;">Deposite a partir de R$ 20 e dobre seu saldo.</span>
+              <span style="font-size: 11px; color: #cbd5e1;">Deposite a partir de R$ 20 e dobre seu saldo inicial.</span>
             </div>
           </div>
 
           <div style="font-size: 12px; color: #94a3b8; font-weight: 700; margin-bottom: 8px;">ESCOLHA O VALOR:</div>
           <div class="quick-bet-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 12px;">
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(20)">R$ 20</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(30)">R$ 30</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(50)">R$ 50</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(100)">R$ 100</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(200)">R$ 200</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(500)">R$ 500</button>
+            <button class="quick-btn active" onclick="WagerEngine.setDepAmount(20, this)">R$ 20</button>
+            <button class="quick-btn" onclick="WagerEngine.setDepAmount(30, this)">R$ 30</button>
+            <button class="quick-btn" onclick="WagerEngine.setDepAmount(50, this)">R$ 50</button>
+            <button class="quick-btn" onclick="WagerEngine.setDepAmount(100, this)">R$ 100</button>
+            <button class="quick-btn" onclick="WagerEngine.setDepAmount(200, this)">R$ 200</button>
+            <button class="quick-btn" onclick="WagerEngine.setDepAmount(500, this)">R$ 500</button>
           </div>
 
           <div class="wager-input-row">
@@ -703,9 +919,11 @@
       modal.style.display = 'flex';
     },
 
-    setDepAmount(val) {
+    setDepAmount(val, btn) {
       const input = document.getElementById('dep-val-input');
       if (input) input.value = val;
+      document.querySelectorAll('#deposit-modal .quick-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
     },
 
     async generatePixDeposit() {
@@ -719,7 +937,7 @@
       const btn = document.getElementById('btn-gen-pix');
       if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Gerando PIX seguro...';
+        btn.textContent = 'Gerando PIX oficial...';
       }
 
       try {
@@ -731,24 +949,33 @@
         const area = document.getElementById('pix-qr-area');
         if (area) {
           area.style.display = 'block';
+          const bonusText = res.bonusAmount > 0 ? ` (+ ${this.formatBRL(res.bonusAmount)} de Bônus = ${this.formatBRL(res.amount + res.bonusAmount)} total)` : '';
           area.innerHTML = `
             <div class="pix-qr-container">
-              <img src="${res.qrCodeUrl}" alt="QR Code PIX" class="pix-qr-img" />
-              <div style="font-size: 12px; color: #94a3b8; text-align: center;">
-                Escaneie o QR Code ou copie o código abaixo:
+              <div class="deposit-countdown" id="pix-timer">⏱️ Código expira em 10:00</div>
+              <img src="${res.qrCodeUrl}" alt="QR Code PIX VizzionPay" class="pix-qr-img" />
+              <div style="font-size: 13.5px; color: #ffd166; font-weight: 700; text-align: center;">
+                Valor: ${this.formatBRL(res.amount)}${bonusText}
+              </div>
+              <div style="font-size: 12px; color: #94a3b8; text-align: center; max-width: 320px;">
+                Abra seu banco, escolha <b>PIX Copia e Cola</b> ou <b>Escanear QR Code</b>:
               </div>
               <div class="pix-code-box">
                 <input type="text" id="pix-code-text" class="pix-code-input" value="${res.pixCode}" readonly />
-                <button class="btn-copy-pix" onclick="WagerEngine.copyPix()">COPIAR</button>
+                <button class="btn-copy-pix" id="btn-copy-pix" onclick="WagerEngine.copyPix()">COPIAR</button>
               </div>
-              <div style="font-size: 11px; color: #10b981; font-weight: 600; text-align: center; margin-top: 4px;">
-                🔄 Aguardando confirmação do pagamento...
+              <button class="btn-verify-now" onclick="WagerEngine.checkDepositNow('${res.depositId}')">
+                🔄 JÁ FIZ O PIX / VERIFICAR AGORA
+              </button>
+              <div style="font-size: 11px; color: #10b981; font-weight: 600; text-align: center; margin-top: 6px;">
+                🔄 Atualização automática a cada 3 segundos...
               </div>
             </div>
           `;
         }
 
         if (btn) btn.style.display = 'none';
+        this.startPixCountdown(600);
         this.startDepositPolling(res.depositId);
       } catch (err) {
         this.showToast('Erro ao gerar PIX: ' + err.message);
@@ -759,11 +986,88 @@
       }
     },
 
+    startPixCountdown(seconds) {
+      if (this._pixCountdownTimer) clearInterval(this._pixCountdownTimer);
+      let remaining = seconds;
+      const el = document.getElementById('pix-timer');
+      this._pixCountdownTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(this._pixCountdownTimer);
+          if (el) el.textContent = '⚠️ Código PIX expirado. Gere um novo se necessário.';
+          return;
+        }
+        const mins = Math.floor(remaining / 60).toString().padStart(2, '0');
+        const secs = (remaining % 60).toString().padStart(2, '0');
+        if (el) el.textContent = `⏱️ Código expira em ${mins}:${secs}`;
+      }, 1000);
+    },
+
+    async checkDepositNow(depositId) {
+      this.showToast('🔍 Consultando confirmação no banco...');
+      try {
+        const res = await this.api(`/api/wallet/check-deposit/${encodeURIComponent(depositId)}`);
+        if (res && res.status === 'approved') {
+          this.handleDepositSuccess(res);
+        } else {
+          this.showToast('Pagamento ainda aguardando compensação pelo banco. Se já realizou a transferência, o saldo será creditado automaticamente em instantes.');
+        }
+      } catch (err) {
+        this.showToast('Erro ao verificar status: ' + err.message);
+      }
+    },
+
+    handleDepositSuccess(res) {
+      if (this.pollingTimer) {
+        clearInterval(this.pollingTimer);
+        this.pollingTimer = null;
+      }
+      if (this._pixCountdownTimer) {
+        clearInterval(this._pixCountdownTimer);
+        this._pixCountdownTimer = null;
+      }
+
+      if (this.user) {
+        this.user.balance = res.balance;
+        this.user.cash_balance = res.cash_balance;
+      }
+      this.updateBalanceUI();
+
+      const area = document.getElementById('pix-qr-area');
+      if (area) {
+        area.innerHTML = `
+          <div style="background: rgba(16, 185, 129, 0.2); border: 1.5px solid #10b981; border-radius: 12px; padding: 22px; text-align: center; margin-top: 15px;">
+            <div style="font-size: 42px; color: #6ee7b7; margin-bottom: 8px;">✓</div>
+            <strong style="color: #6ee7b7; font-size: 19px; display: block; margin-bottom: 6px;">PAGAMENTO CONFIRMADO!</strong>
+            <p style="color: #f1f5f2; font-size: 13.5px; margin-bottom: 16px;">Seu saldo de <b>${this.formatBRL(res.amount + (res.bonusAmount || 0))}</b> foi creditado na sua conta!</p>
+            <button class="btn-start-race" onclick="document.getElementById('deposit-modal').style.display='none'" style="background: linear-gradient(135deg, #10b981, #059669);">
+              🏎️ JOGAR AGORA
+            </button>
+          </div>
+        `;
+      }
+
+      this.playWinSound();
+      this.showToast('🎉 Pagamento confirmado com sucesso! Saldo creditado.');
+    },
+
     copyPix() {
       const input = document.getElementById('pix-code-text');
+      const btn = document.getElementById('btn-copy-pix');
       if (input) {
         input.select();
         navigator.clipboard.writeText(input.value);
+        if (btn) {
+          const original = btn.textContent;
+          btn.textContent = '✓ COPIADO!';
+          btn.style.background = '#10b981';
+          btn.style.color = '#fff';
+          setTimeout(() => {
+            btn.textContent = original;
+            btn.style.background = '';
+            btn.style.color = '';
+          }, 2500);
+        }
         this.showToast('📋 Código PIX copiado com sucesso! Pague no app do seu banco.');
       }
     },
@@ -775,34 +1079,10 @@
         try {
           const res = await this.api(`/api/wallet/check-deposit/${encodeURIComponent(depositId)}`);
           if (res && res.status === 'approved') {
-            clearInterval(this.pollingTimer);
-            this.pollingTimer = null;
-
-            if (this.user) {
-              this.user.balance = res.balance;
-              this.user.cash_balance = res.cash_balance;
-            }
-            this.updateBalanceUI();
-
-            const area = document.getElementById('pix-qr-area');
-            if (area) {
-              area.innerHTML = `
-                <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; border-radius: 10px; padding: 20px; text-align: center; margin-top: 15px;">
-                  <div style="font-size: 36px; color: #6ee7b7; margin-bottom: 8px;">✓</div>
-                  <strong style="color: #6ee7b7; font-size: 17px; display: block; margin-bottom: 5px;">PAGAMENTO CONFIRMADO!</strong>
-                  <p style="color: #f1f5f2; font-size: 13px; margin-bottom: 14px;">Seu saldo de <b>${this.formatBRL(res.amount + (res.bonusAmount || 0))}</b> já foi creditado!</p>
-                  <button class="btn-start-race" onclick="document.getElementById('deposit-modal').style.display='none'">
-                    🏁 JOGAR AGORA
-                  </button>
-                </div>
-              `;
-            }
-
-            this.playWinSound();
-            this.showToast('🎉 Pagamento confirmado! Saldo creditado.');
+            this.handleDepositSuccess(res);
           }
         } catch (_) {}
-      }, 3500);
+      }, 3000);
     },
 
     openWithdrawModal() {
@@ -812,6 +1092,26 @@
         modal.id = 'withdraw-modal';
         modal.className = 'wager-modal-overlay';
         document.body.appendChild(modal);
+      }
+
+      // Se for usuário convidado, exige cadastro/login para segurança do saque
+      if (this.user?.is_guest) {
+        modal.innerHTML = `
+          <div class="wager-modal-card">
+            <button class="modal-close-btn" onclick="document.getElementById('withdraw-modal').style.display='none'">×</button>
+            <div style="font-size: 38px; margin-bottom: 8px;">🔒</div>
+            <div class="modal-heading">IDENTIFICAÇÃO NECESSÁRIA</div>
+            <div class="modal-sub">Para sua segurança e conformidade bancária PIX, crie sua conta de piloto ou faça login para solicitar saques.</div>
+            <button class="btn-start-race" onclick="document.getElementById('withdraw-modal').style.display='none'; WagerEngine.openRegisterModal();" style="background: linear-gradient(135deg, #e82127, #b8151a); margin-top: 14px;">
+              ✨ CRIAR CONTA AGORA
+            </button>
+            <button class="btn-top btn-with" style="width: 100%; justify-content: center; margin-top: 8px;" onclick="document.getElementById('withdraw-modal').style.display='none'; WagerEngine.openLoginModal();">
+              👤 JÁ POSSUO CONTA (ENTRAR)
+            </button>
+          </div>
+        `;
+        modal.style.display = 'flex';
+        return;
       }
 
       const available = this.formatBRL(this.user?.cash_balance || 0);

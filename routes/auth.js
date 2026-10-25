@@ -10,15 +10,18 @@ const now = () => new Date().toISOString();
 // Obter dados do usuário atual
 router.get('/me', verifyAuth, async (req, res) => {
   const user = req.user;
+  const isGuest = Boolean(user.id.startsWith('pilot_') || !user.password_hash);
   res.json({
     id: user.id,
     username: user.username,
     email: user.email,
+    phone: user.phone || '',
     balance: user.balance || 0,
     cash_balance: user.cash_balance || 0,
     bonus_balance: user.bonus_balance || 0,
     role: user.role || 'user',
     is_influencer: Boolean(user.is_influencer),
+    is_guest: isGuest,
     difficulty: store.settings.difficulty || 'hard'
   });
 });
@@ -97,9 +100,12 @@ router.post('/login', async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        balance: user.balance,
-        cash_balance: user.cash_balance,
-        bonus_balance: user.bonus_balance
+        phone: user.phone || '',
+        balance: user.balance || 0,
+        cash_balance: user.cash_balance || 0,
+        bonus_balance: user.bonus_balance || 0,
+        is_influencer: Boolean(user.is_influencer),
+        is_guest: false
       }
     });
   } catch (err) {
@@ -116,20 +122,34 @@ router.post('/register', async (req, res) => {
     }
 
     const cleanUsername = String(username).trim();
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ error: 'O nome de usuário deve ter no mínimo 3 caracteres.' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
+    }
+
     if (store.users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase())) {
       return res.status(400).json({ error: 'Este nome de piloto já está em uso.' });
+    }
+
+    const cleanEmail = email ? String(email).trim().toLowerCase() : '';
+    if (cleanEmail && store.users.some(u => u.email && u.email.toLowerCase() === cleanEmail)) {
+      return res.status(400).json({ error: 'Este e-mail já está cadastrado em outra conta.' });
     }
 
     const newUser = {
       id: uuid(),
       username: cleanUsername,
-      email: email ? String(email).trim().toLowerCase() : `${cleanUsername.toLowerCase()}@player.local`,
-      phone: phone ? String(phone).replace(/\D/g, '') : '11999999999',
+      email: cleanEmail || `${cleanUsername.toLowerCase()}@player.local`,
+      phone: phone ? String(phone).replace(/\D/g, '') : '',
       password_hash: await bcrypt.hash(password, 10),
       balance: 0,
       cash_balance: 0,
       bonus_balance: 0,
       role: 'user',
+      is_influencer: false,
       status: 'active',
       created_at: now()
     };
@@ -146,9 +166,12 @@ router.post('/register', async (req, res) => {
         id: newUser.id,
         username: newUser.username,
         email: newUser.email,
+        phone: newUser.phone,
         balance: newUser.balance,
         cash_balance: newUser.cash_balance,
-        bonus_balance: newUser.bonus_balance
+        bonus_balance: newUser.bonus_balance,
+        is_influencer: false,
+        is_guest: false
       }
     });
   } catch (err) {

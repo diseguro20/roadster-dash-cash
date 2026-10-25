@@ -16,9 +16,9 @@
     "express": "^5.2.1",
     "firebase-admin": "^13.6.0",
     "jsonwebtoken": "^9.0.3",
+    "qrcode": "^1.5.4",
     "uuid": "^11.1.0"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
   }
