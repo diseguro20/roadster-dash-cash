@@ -23,6 +23,8 @@
     demoBalance: 5000,
     pollingTimer: null,
     _lastHudUpdate: 0,
+    _isStartingRace: false,
+    _loadingFailsafe: null,
 
     formatBRL(cents) {
       const v = (Number(cents || 0) / 100);
@@ -193,7 +195,95 @@
       }
     },
 
+    showStartLoading(amountText, statusText) {
+      let overlay = document.getElementById('wager-start-loading');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'wager-start-loading';
+        document.body.appendChild(overlay);
+      }
+      overlay.classList.remove('fade-out');
+      overlay.innerHTML = `
+        <div class="wager-loading-card">
+          <div class="wager-loading-spinner"></div>
+          <div class="wager-loading-title">🏎️ PREPARANDO O TESLA...</div>
+          <div class="wager-loading-desc">
+            Registrando aposta de <strong style="color: #ffd166;">${amountText}</strong> e calibrando propulsores...
+          </div>
+          <div class="wager-loading-bar-track">
+            <div class="wager-loading-bar-fill"></div>
+          </div>
+          <div class="wager-loading-status" id="wager-loading-status">${statusText || '⚡ Autenticando e gerando sessão de corrida...'}</div>
+        </div>
+      `;
+      overlay.style.display = 'flex';
+    },
+
+    updateStartLoadingStatus(text) {
+      const el = document.getElementById('wager-loading-status');
+      if (el) el.textContent = text;
+    },
+
+    hideStartLoading() {
+      const overlay = document.getElementById('wager-start-loading');
+      if (overlay) {
+        overlay.classList.add('fade-out');
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          overlay.classList.remove('fade-out');
+        }, 280);
+      }
+      this._isStartingRace = false;
+    },
+
+    returnToMenu() {
+      this.hideCashoutHUD();
+      this.hideStartLoading();
+      this.activeWager.inProgress = false;
+      this._isStartingRace = false;
+
+      const lossModal = document.getElementById('loss-revanche-modal');
+      if (lossModal) lossModal.style.display = 'none';
+      const winModal = document.getElementById('win-modal');
+      if (winModal) winModal.style.display = 'none';
+      const gameOverEl = document.getElementById('gameover');
+      if (gameOverEl) gameOverEl.classList.add('hidden');
+      const hudEl = document.getElementById('hud');
+      if (hudEl) hudEl.classList.add('hidden');
+
+      if (typeof window.__goToMenu === 'function') {
+        window.__goToMenu();
+      } else if (window.__game && typeof window.__game.toMenu === 'function') {
+        window.__game.toMenu();
+      } else {
+        const btn = document.getElementById('go-menu-btn');
+        if (btn) btn.click();
+      }
+
+      const menuEl = document.getElementById('menu');
+      if (menuEl) menuEl.classList.remove('hidden');
+      this.updateBalanceUI();
+    },
+
+    onReturnToMenu() {
+      this.hideCashoutHUD();
+      this.hideStartLoading();
+      this.activeWager.inProgress = false;
+      this._isStartingRace = false;
+
+      const lossModal = document.getElementById('loss-revanche-modal');
+      if (lossModal) lossModal.style.display = 'none';
+      const hudEl = document.getElementById('hud');
+      if (hudEl) hudEl.classList.add('hidden');
+      const gameOverEl = document.getElementById('gameover');
+      if (gameOverEl) gameOverEl.classList.add('hidden');
+      const menuEl = document.getElementById('menu');
+      if (menuEl) menuEl.classList.remove('hidden');
+    },
+
     async startWagerRace() {
+      if (this._isStartingRace) return;
+
       // 1. Exige seleção explícita de valor
       if (!this.activeWager.hasSelectedBet || !this.activeWager.betAmount || this.activeWager.betAmount < 100) {
         this.showToast('⚠️ Escolha o valor da aposta antes de iniciar a corrida!');
@@ -206,16 +296,31 @@
       }
 
       const amount = this.activeWager.betAmount;
+      const formattedAmount = this.formatBRL(amount);
 
-      // 2. Sempre verifica saldo na conta
+      // 2. Sempre verifica saldo na conta antes de disparar o jogo
       if (this.activeWager.mode === 'real') {
         const currentBalance = (this.user?.balance != null) ? this.user.balance : 0;
         if (currentBalance < amount) {
-          this.showToast(`⚠️ Saldo insuficiente! Você possui ${this.formatBRL(currentBalance)} e escolheu apostar ${this.formatBRL(amount)}. Faça um PIX para jogar.`);
+          this.showToast(`⚠️ Saldo insuficiente! Você possui ${this.formatBRL(currentBalance)} e escolheu apostar ${formattedAmount}. Faça um PIX para jogar.`);
           this.openDepositModal();
           return;
         }
+      }
 
+      // 3. Exibe tela de carregamento IMEDIATAMENTE (sem sensação de congelamento)
+      this._isStartingRace = true;
+      this.showStartLoading(formattedAmount, '⚡ Registrando aposta e conectando à pista...');
+
+      // Fecha modais anteriores
+      const lossModal = document.getElementById('loss-revanche-modal');
+      if (lossModal) lossModal.style.display = 'none';
+      const winModal = document.getElementById('win-modal');
+      if (winModal) winModal.style.display = 'none';
+      const gameOverEl = document.getElementById('gameover');
+      if (gameOverEl) gameOverEl.classList.add('hidden');
+
+      if (this.activeWager.mode === 'real') {
         try {
           const res = await this.api('/api/game/start', {
             method: 'POST',
@@ -234,6 +339,7 @@
           }
           this.updateBalanceUI();
         } catch (err) {
+          this.hideStartLoading();
           this.showToast('Erro ao iniciar corrida: ' + err.message);
           return;
         }
@@ -249,18 +355,24 @@
         this.updateBalanceUI();
       }
 
-      // Fecha modais anteriores se abertos
-      const lossModal = document.getElementById('loss-revanche-modal');
-      if (lossModal) lossModal.style.display = 'none';
-      const winModal = document.getElementById('win-modal');
-      if (winModal) winModal.style.display = 'none';
+      this.updateStartLoadingStatus('🚀 Carregando pista 3D e liberando propulsores...');
 
       // Ativa HUD de Cashout
       this.showCashoutHUD();
 
       // Dispara o motor 3D
-      const origPlayBtn = document.getElementById('play-btn');
-      if (origPlayBtn) origPlayBtn.click();
+      if (typeof window.__origStartGame === 'function') {
+        window.__origStartGame();
+      } else {
+        const origPlayBtn = document.getElementById('play-btn');
+        if (origPlayBtn) origPlayBtn.click();
+      }
+
+      // Failsafe: oculta o loading após 2.5s caso a cena 3D demore para invocar o hook
+      clearTimeout(this._loadingFailsafe);
+      this._loadingFailsafe = setTimeout(() => {
+        this.hideStartLoading();
+      }, 2500);
     },
 
     showCashoutHUD() {
@@ -316,7 +428,6 @@
       const multEl = document.getElementById('wager-mult-live');
       const profitEl = document.getElementById('wager-profit-live');
       const cashoutLabel = document.getElementById('cashout-label');
-      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 800;
 
       const tick = (now) => {
         if (!this.activeWager.inProgress || this.activeWager.cashedOut) return;
@@ -350,11 +461,16 @@
     async executeCashout() {
       if (!this.activeWager.inProgress || this.activeWager.cashedOut) return;
       this.activeWager.cashedOut = true;
+      this.activeWager.inProgress = false;
 
       const mult = this.activeWager.multiplier;
       const distance = this.activeWager.distance;
       const payoutCents = Math.floor(this.activeWager.betAmount * mult);
 
+      // 1. Imediatamente para o jogo, áudio de corrida e retorna ao lobby principal
+      this.returnToMenu();
+
+      // 2. Registra o resgate no backend
       if (this.activeWager.mode === 'real') {
         try {
           const res = await this.api('/api/game/end', {
@@ -380,23 +496,18 @@
         this.updateBalanceUI();
       }
 
-      this.hideCashoutHUD();
+      // 3. Toca som de vitória e exibe o modal sobre o menu
       this.playWinSound();
       this.showWinModal(payoutCents, mult, distance);
-
-      // Congela corrida com segurança
-      if (window.__qt && window.__qt.onGameOver) {
-        window.__qt.onGameOver({
-          score: Math.floor(window.__qt.score || distance * 10),
-          distance,
-          duration: 30
-        });
-      }
     },
 
     // Derrota / Batida no Tráfego: Exibe Pop-up de Revanche com Seleção de Aposta
     async onGameOver(details) {
       this.hideCashoutHUD();
+      this.hideStartLoading();
+
+      const gameOverEl = document.getElementById('gameover');
+      if (gameOverEl) gameOverEl.classList.add('hidden');
 
       if (this.activeWager.inProgress && !this.activeWager.cashedOut) {
         this.activeWager.inProgress = false;
@@ -426,8 +537,10 @@
         this.onGameOver(details);
       };
       window.__onGameStartHook = () => {
-        const lossModal = document.getElementById('loss-revanche-modal');
-        if (lossModal) lossModal.style.display = 'none';
+        clearTimeout(this._loadingFailsafe);
+        setTimeout(() => {
+          this.hideStartLoading();
+        }, 300);
       };
     },
 
@@ -468,7 +581,7 @@
 
           <div id="revanche-action-btn-area">
             ${hasBalance ? `
-              <button class="btn-start-race" onclick="WagerEngine.startWagerRace()" style="margin-bottom: 8px;">
+              <button class="btn-start-race" onclick="document.getElementById('loss-revanche-modal').style.display='none'; WagerEngine.startWagerRace();" style="margin-bottom: 8px;">
                 🏎️ JOGAR NOVAMENTE (${this.formatBRL(currentBet)})
               </button>
             ` : `
@@ -478,7 +591,7 @@
             `}
           </div>
 
-          <button class="btn-top btn-with" style="width: 100%; justify-content: center;" onclick="document.getElementById('loss-revanche-modal').style.display='none'">
+          <button class="btn-top btn-with" style="width: 100%; justify-content: center;" onclick="WagerEngine.returnToMenu()">
             🏠 VOLTAR AO LOBBY
           </button>
         </div>
@@ -497,7 +610,7 @@
       const area = document.getElementById('revanche-action-btn-area');
       if (area) {
         area.innerHTML = hasBalance ? `
-          <button class="btn-start-race" onclick="WagerEngine.startWagerRace()" style="margin-bottom: 8px;">
+          <button class="btn-start-race" onclick="document.getElementById('loss-revanche-modal').style.display='none'; WagerEngine.startWagerRace();" style="margin-bottom: 8px;">
             🏎️ JOGAR NOVAMENTE (${this.formatBRL(cents)})
           </button>
         ` : `
@@ -530,10 +643,10 @@
               MULTIPLICADOR: <b>${multiplier.toFixed(2)}x</b> | DISTÂNCIA: <b>${distance}m</b>
             </div>
           </div>
-          <button class="btn-start-race" onclick="WagerEngine.startWagerRace()" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 14px;">
-            🏁 CORRER NOVAMENTE
+          <button class="btn-start-race" onclick="document.getElementById('win-modal').style.display='none'; WagerEngine.startWagerRace();" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 14px;">
+            🏁 CORRER NOVAMENTE (${this.formatBRL(this.activeWager.betAmount)})
           </button>
-          <button class="btn-top btn-with" style="width: 100%; justify-content: center; margin-top: 8px;" onclick="document.getElementById('win-modal').style.display='none'">
+          <button class="btn-top btn-with" style="width: 100%; justify-content: center; margin-top: 8px;" onclick="WagerEngine.returnToMenu()">
             🏠 MENU PRINCIPAL
           </button>
         </div>
