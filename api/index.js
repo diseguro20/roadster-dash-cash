@@ -21,14 +21,14 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rotas de API
-app.use('/api/auth', authRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/game', gameRoutes);
+// Rotas de API (suportando /api/ e sem /api/ no Vercel Serverless)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/wallet', '/wallet'], walletRoutes);
+app.use(['/api/game', '/game'], gameRoutes);
 app.use(['/api/webhook', '/webhook'], webhookRoutes);
 
 // Health check & configurações públicas
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({
     status: 'online',
     platform: 'Roadster Dash Cash',
@@ -36,7 +36,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/settings/public', (req, res) => {
+app.get(['/api/settings/public', '/settings/public'], (req, res) => {
   res.json({
     platformName: store.settings.platformName || 'Roadster Dash Cash',
     minBet: store.settings.minBet,
@@ -54,9 +54,15 @@ app.use('/assets', express.static(path.join(rootDir, 'assets')));
 app.use('/icons', express.static(path.join(rootDir, 'icons')));
 app.use('/items', express.static(path.join(rootDir, 'items')));
 
-// Fallback para rota principal
+// Fallback para rota principal / SPA
 app.use((req, res) => {
-  if (req.path.startsWith('/api/')) {
+  if (
+    req.path.startsWith('/api/') ||
+    req.path.startsWith('/auth') ||
+    req.path.startsWith('/wallet') ||
+    req.path.startsWith('/game') ||
+    req.path.startsWith('/webhook')
+  ) {
     return res.status(404).json({ error: 'Endpoint não encontrado.' });
   }
   res.sendFile(path.join(rootDir, 'index.html'));
