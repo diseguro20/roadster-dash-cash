@@ -3,15 +3,7 @@
   "regions": ["gru1"],
   "rewrites": [
     {
-      "source": "/(assets|icons|items)/:match*",
-      "destination": "/$1/:match*"
-    },
-    {
-      "source": "/api/:match*",
-      "destination": "/api/index.js"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/api/:path*",
       "destination": "/api/index.js"
     }
   ]
