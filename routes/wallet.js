@@ -20,6 +20,9 @@ router.get('/balance', verifyAuth, (req, res) => {
 router.post('/deposit', verifyAuth, async (req, res) => {
   try {
     const user = req.user;
+    if (!user || user.id.startsWith('pilot_') || !user.password_hash) {
+      return res.status(401).json({ error: 'É obrigatório estar cadastrado e logado para depositar via PIX.' });
+    }
     const amount = Math.round(Number(req.body?.amount || 0));
     const minDeposit = Number(store.settings.minDeposit) || 2000; // R$ 20,00
 
@@ -126,6 +129,9 @@ router.get('/check-deposit/:id', verifyAuth, async (req, res) => {
 router.post('/withdraw', verifyAuth, async (req, res) => {
   try {
     const user = req.user;
+    if (!user || user.id.startsWith('pilot_') || !user.password_hash) {
+      return res.status(401).json({ error: 'É obrigatório estar cadastrado e logado para solicitar saques.' });
+    }
     const amount = Math.round(Number(req.body?.amount || 0));
     const pixKey = String(req.body?.pixKey || '').trim();
     const pixType = String(req.body?.pixType || 'cpf').trim();

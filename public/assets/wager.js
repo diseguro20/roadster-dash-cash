@@ -68,34 +68,31 @@
       this.initBetControls();
       this.updateBalanceUI();
       this.updateAuthUI();
+
+      // "ja ao entrar, entre direto na tela de cadastro ou se ja tiver login pode escolher logar"
+      if (!this.user || this.user.is_guest) {
+        this.openAuthModal('register', true);
+      }
     },
 
     async loadUser() {
-      try {
-        if (this.token) {
-          const data = await this.api('/api/auth/me');
-          this.user = data;
-        } else {
-          const guest = await this.api('/api/auth/guest', {
-            method: 'POST',
-            body: JSON.stringify({ name: localStorage.getItem('pilot_name') || '' })
-          });
-          this.token = guest.token;
-          localStorage.setItem('roadster_token', guest.token);
-          this.user = guest.user;
-          this.user.is_guest = true;
-        }
-      } catch (err) {
-        console.warn('[WagerEngine] Sessão renovada como piloto rápido.');
+      if (this.token) {
         try {
+          const data = await this.api('/api/auth/me');
+          if (data && !data.is_guest) {
+            this.user = data;
+          } else {
+            this.token = '';
+            localStorage.removeItem('roadster_token');
+            this.user = null;
+          }
+        } catch (_) {
           this.token = '';
           localStorage.removeItem('roadster_token');
-          const guest = await this.api('/api/auth/guest', { method: 'POST' });
-          this.token = guest.token;
-          localStorage.setItem('roadster_token', guest.token);
-          this.user = guest.user;
-          this.user.is_guest = true;
-        } catch (_) {}
+          this.user = null;
+        }
+      } else {
+        this.user = null;
       }
 
       // Sincroniza modo influenciador com o motor 3D
@@ -126,56 +123,115 @@
         `;
       } else {
         authBox.innerHTML = `
-          <button class="btn-top btn-auth-login" onclick="WagerEngine.openLoginModal()">
+          <button class="btn-top btn-auth-login" onclick="WagerEngine.openAuthModal('login')">
             <span>👤</span> <span>ENTRAR</span>
           </button>
-          <button class="btn-top btn-auth-reg" onclick="WagerEngine.openRegisterModal()">
+          <button class="btn-top btn-auth-reg" onclick="WagerEngine.openAuthModal('register')">
             <span>✨</span> <span>CRIAR CONTA</span>
           </button>
         `;
       }
 
       const pilotBtn = document.getElementById('pilot-name');
-      if (pilotBtn && this.user) {
-        pilotBtn.textContent = this.user.username + (this.user.is_guest ? ' (Convidado)' : '');
+      if (pilotBtn) {
+        if (this.user && !this.user.is_guest) {
+          pilotBtn.textContent = this.user.username;
+          pilotBtn.onclick = null;
+        } else {
+          pilotBtn.innerHTML = 'Cadastre-se para Jogar';
+          pilotBtn.onclick = () => this.openAuthModal('register', true);
+        }
       }
     },
 
-    openLoginModal() {
-      const modal = document.getElementById('login-modal');
-      if (modal) modal.style.display = 'flex';
-      const regModal = document.getElementById('register-modal');
-      if (regModal) regModal.style.display = 'none';
-      const errEl = document.getElementById('login-error-msg');
-      if (errEl) errEl.style.display = 'none';
+    updateBalanceUI() {
+      const balanceEl = document.getElementById('topbar-balance');
+      if (!balanceEl) return;
+
+      if (!this.user || this.user.is_guest) {
+        balanceEl.textContent = 'R$ 0,00';
+        balanceEl.style.color = '#94a3b8';
+        return;
+      }
+
+      if (this.activeWager.mode === 'demo') {
+        balanceEl.textContent = this.formatBRL(this.demoBalance) + ' (DEMO)';
+        balanceEl.style.color = '#38bdf8';
+      } else {
+        const total = (this.user?.balance != null) ? this.user.balance : 0;
+        balanceEl.textContent = this.formatBRL(total);
+        balanceEl.style.color = '#ffd166';
+      }
     },
 
-    openRegisterModal() {
-      const modal = document.getElementById('register-modal');
-      if (modal) modal.style.display = 'flex';
-      const loginModal = document.getElementById('login-modal');
-      if (loginModal) loginModal.style.display = 'none';
-      const errEl = document.getElementById('reg-error-msg');
-      if (errEl) errEl.style.display = 'none';
+    openAuthModal(tab = 'register', isGate = false) {
+      const modal = document.getElementById('auth-modal');
+      if (!modal) return;
+      this.setAuthTab(tab);
+      const regErr = document.getElementById('reg-error-msg');
+      if (regErr) regErr.style.display = 'none';
+      const logErr = document.getElementById('login-error-msg');
+      if (logErr) logErr.style.display = 'none';
+
+      // Fecha outros modais se abertos
+      const depModal = document.getElementById('deposit-modal');
+      if (depModal) depModal.style.display = 'none';
+      const wthModal = document.getElementById('withdraw-modal');
+      if (wthModal) wthModal.style.display = 'none';
+
+      modal.style.display = 'flex';
+    },
+
+    setAuthTab(tab = 'register') {
+      const regForm = document.getElementById('form-register');
+      const logForm = document.getElementById('form-login');
+      const regTab = document.getElementById('tab-btn-register');
+      const logTab = document.getElementById('tab-btn-login');
+      const heading = document.getElementById('auth-heading');
+      const sub = document.getElementById('auth-sub');
+
+      if (tab === 'register') {
+        if (regForm) regForm.style.display = 'block';
+        if (logForm) logForm.style.display = 'none';
+        if (regTab) regTab.classList.add('active');
+        if (logTab) logTab.classList.remove('active');
+        if (heading) heading.textContent = 'CRIAR CONTA DE PILOTO';
+        if (sub) sub.textContent = 'Cadastre-se para apostar e resgatar dinheiro real via PIX!';
+      } else {
+        if (regForm) regForm.style.display = 'none';
+        if (logForm) logForm.style.display = 'block';
+        if (regTab) regTab.classList.remove('active');
+        if (logTab) logTab.classList.add('active');
+        if (heading) heading.textContent = 'ENTRAR NA CONTA';
+        if (sub) sub.textContent = 'Acesse sua conta para apostar, depositar e sacar via PIX';
+      }
+    },
+
+    closeAuthModal() {
+      const modal = document.getElementById('auth-modal');
+      if (modal) modal.style.display = 'none';
+    },
+
+    openLoginModal() {
+      this.openAuthModal('login');
+    },
+
+    openRegisterModal(isGate = false) {
+      this.openAuthModal('register', isGate);
     },
 
     closeAuthModals() {
-      const loginModal = document.getElementById('login-modal');
-      if (loginModal) loginModal.style.display = 'none';
-      const regModal = document.getElementById('register-modal');
-      if (regModal) regModal.style.display = 'none';
+      this.closeAuthModal();
     },
 
     switchToRegister(e) {
       if (e) e.preventDefault();
-      this.closeAuthModals();
-      this.openRegisterModal();
+      this.setAuthTab('register');
     },
 
     switchToLogin(e) {
       if (e) e.preventDefault();
-      this.closeAuthModals();
-      this.openLoginModal();
+      this.setAuthTab('login');
     },
 
     async handleLogin(e) {
@@ -220,7 +276,7 @@
           window.__isInfluencerActive = false;
         }
 
-        this.closeAuthModals();
+        this.closeAuthModal();
         this.updateBalanceUI();
         this.updateAuthUI();
         this.showToast(`👋 Bem-vindo de volta, ${this.user.username}!`);
@@ -294,7 +350,7 @@
         this.user = res.user;
         this.user.is_guest = false;
 
-        this.closeAuthModals();
+        this.closeAuthModal();
         this.updateBalanceUI();
         this.updateAuthUI();
         this.showToast(`🎉 Conta criada com sucesso! Boas corridas, ${this.user.username}!`);
@@ -315,27 +371,10 @@
       localStorage.removeItem('roadster_token');
       this.token = '';
       this.user = null;
-      await this.loadUser();
+      this.updateBalanceUI();
+      this.updateAuthUI();
+      this.openAuthModal('login');
       this.showToast('Você saiu da sua conta.');
-    },
-
-    updateBalanceUI() {
-      const balanceEl = document.getElementById('topbar-balance');
-      if (!balanceEl) return;
-
-      if (this.activeWager.mode === 'demo') {
-        balanceEl.textContent = this.formatBRL(this.demoBalance) + ' (DEMO)';
-        balanceEl.style.color = '#38bdf8';
-      } else {
-        const total = (this.user?.balance != null) ? this.user.balance : 0;
-        balanceEl.textContent = this.formatBRL(total);
-        balanceEl.style.color = '#ffd166';
-      }
-
-      const pilotEl = document.getElementById('topbar-pilot');
-      if (pilotEl && this.user) {
-        pilotEl.innerHTML = `${this.user.username} ${this.user.is_influencer ? '<span style="color:#ffd166;font-size:11px;">⭐ INFLUENCER</span>' : ''}`;
-      }
     },
 
     initBetControls() {
@@ -499,6 +538,13 @@
 
     async startWagerRace() {
       if (this._isStartingRace) return;
+
+      // 0. Bloqueia corrida se não estiver logado
+      if (!this.user || this.user.is_guest) {
+        this.showToast('⚠️ É obrigatório criar uma conta ou fazer login para jogar!');
+        this.openAuthModal('register', true);
+        return;
+      }
 
       // 1. Exige seleção explícita de valor
       if (!this.activeWager.hasSelectedBet || !this.activeWager.betAmount || this.activeWager.betAmount < 100) {
@@ -872,6 +918,12 @@
 
     // Depósito PIX VizzionPay
     openDepositModal() {
+      if (!this.user || this.user.is_guest) {
+        this.showToast('⚠️ Crie sua conta de piloto ou faça login para depositar via PIX.');
+        this.openAuthModal('register', true);
+        return;
+      }
+
       let modal = document.getElementById('deposit-modal');
       if (!modal) {
         modal = document.createElement('div');
@@ -1086,32 +1138,18 @@
     },
 
     openWithdrawModal() {
+      if (!this.user || this.user.is_guest) {
+        this.showToast('⚠️ Crie sua conta de piloto ou faça login para solicitar saques.');
+        this.openAuthModal('login', true);
+        return;
+      }
+
       let modal = document.getElementById('withdraw-modal');
       if (!modal) {
         modal = document.createElement('div');
         modal.id = 'withdraw-modal';
         modal.className = 'wager-modal-overlay';
         document.body.appendChild(modal);
-      }
-
-      // Se for usuário convidado, exige cadastro/login para segurança do saque
-      if (this.user?.is_guest) {
-        modal.innerHTML = `
-          <div class="wager-modal-card">
-            <button class="modal-close-btn" onclick="document.getElementById('withdraw-modal').style.display='none'">×</button>
-            <div style="font-size: 38px; margin-bottom: 8px;">🔒</div>
-            <div class="modal-heading">IDENTIFICAÇÃO NECESSÁRIA</div>
-            <div class="modal-sub">Para sua segurança e conformidade bancária PIX, crie sua conta de piloto ou faça login para solicitar saques.</div>
-            <button class="btn-start-race" onclick="document.getElementById('withdraw-modal').style.display='none'; WagerEngine.openRegisterModal();" style="background: linear-gradient(135deg, #e82127, #b8151a); margin-top: 14px;">
-              ✨ CRIAR CONTA AGORA
-            </button>
-            <button class="btn-top btn-with" style="width: 100%; justify-content: center; margin-top: 8px;" onclick="document.getElementById('withdraw-modal').style.display='none'; WagerEngine.openLoginModal();">
-              👤 JÁ POSSUO CONTA (ENTRAR)
-            </button>
-          </div>
-        `;
-        modal.style.display = 'flex';
-        return;
       }
 
       const available = this.formatBRL(this.user?.cash_balance || 0);

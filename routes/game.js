@@ -24,6 +24,11 @@ router.post('/start', verifyAuth, async (req, res) => {
     }
 
     const user = req.user;
+    if (!user || user.id.startsWith('pilot_') || !user.password_hash) {
+      return res.status(401).json({
+        error: 'É obrigatório criar uma conta ou fazer login para apostar.'
+      });
+    }
     if ((user.balance || 0) < amount) {
       return res.status(400).json({
         error: 'Saldo insuficiente para realizar esta corrida. Faça um depósito via PIX.'

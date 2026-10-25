@@ -427,46 +427,25 @@
         };
       })();
     </script>
-    <!-- ── MODAL DE LOGIN ── -->
-    <div id="login-modal" class="wager-modal-overlay" style="display: none;">
+    <!-- ── MODAL PRINCIPAL DE AUTENTICAÇÃO (CADASTRO DIRETO OU LOGIN) ── -->
+    <div id="auth-modal" class="wager-modal-overlay" style="display: none;">
       <div class="wager-modal-card auth-card">
-        <button class="modal-close-btn" onclick="WagerEngine.closeAuthModals()">×</button>
-        <div style="font-size: 38px; margin-bottom: 6px;">🏎️</div>
-        <div class="modal-heading">ENTRAR NA CONTA</div>
-        <div class="modal-sub">Acesse sua conta para apostar, depositar e sacar via PIX</div>
+        <button class="modal-close-btn" id="auth-modal-close" onclick="WagerEngine.closeAuthModal()">×</button>
+        <div style="font-size: 38px; margin-bottom: 4px;">🏎️</div>
+        <div class="modal-heading" id="auth-heading">CRIAR CONTA DE PILOTO</div>
+        <div class="modal-sub" id="auth-sub">Cadastre-se para apostar e resgatar dinheiro real via PIX!</div>
 
-        <form id="form-login" onsubmit="WagerEngine.handleLogin(event)">
-          <div class="auth-input-group">
-            <label for="login-identity">USUÁRIO OU E-MAIL:</label>
-            <input type="text" id="login-identity" class="pix-code-input auth-input" placeholder="Seu nome de piloto ou e-mail" required autocomplete="username" />
-          </div>
-
-          <div class="auth-input-group">
-            <label for="login-password">SENHA:</label>
-            <input type="password" id="login-password" class="pix-code-input auth-input" placeholder="Sua senha secreta" required autocomplete="current-password" />
-          </div>
-
-          <div id="login-error-msg" class="auth-error-msg" style="display: none;"></div>
-
-          <button type="submit" id="btn-submit-login" class="btn-start-race" style="margin-top: 14px;">
-            🚀 ENTRAR NO ROADSTER
+        <!-- Auth Tabs: Cadastro direto ou Login -->
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab-btn active" id="tab-btn-register" onclick="WagerEngine.setAuthTab('register')">
+            ✨ CRIAR CONTA
           </button>
+          <button type="button" class="auth-tab-btn" id="tab-btn-login" onclick="WagerEngine.setAuthTab('login')">
+            👤 JÁ TENHO CONTA
+          </button>
+        </div>
 
-          <div class="auth-switch-text">
-            Ainda não tem conta? <a href="#" onclick="WagerEngine.switchToRegister(event)"><b>Cadastre-se grátis</b></a>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- ── MODAL DE CADASTRO / CRIAR CONTA ── -->
-    <div id="register-modal" class="wager-modal-overlay" style="display: none;">
-      <div class="wager-modal-card auth-card">
-        <button class="modal-close-btn" onclick="WagerEngine.closeAuthModals()">×</button>
-        <div style="font-size: 38px; margin-bottom: 6px;">✨</div>
-        <div class="modal-heading">CRIAR CONTA DE PILOTO</div>
-        <div class="modal-sub">Cadastre-se em segundos para apostar e resgatar dinheiro real via PIX</div>
-
+        <!-- Formulário de Cadastro -->
         <form id="form-register" onsubmit="WagerEngine.handleRegister(event)">
           <div class="auth-input-group">
             <label for="reg-username">NOME DE PILOTO (USUÁRIO):</label>
@@ -496,11 +475,34 @@
           <div id="reg-error-msg" class="auth-error-msg" style="display: none;"></div>
 
           <button type="submit" id="btn-submit-reg" class="btn-start-race" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 14px;">
-            🏁 CRIAR CONTA E JOGAR
+            🏁 CRIAR CONTA E ENTRAR
           </button>
 
           <div class="auth-switch-text">
-            Já possui conta? <a href="#" onclick="WagerEngine.switchToLogin(event)"><b>Fazer Login</b></a>
+            Já possui cadastro? <a href="#" onclick="WagerEngine.setAuthTab('login'); return false;"><b>Clique aqui para Entrar</b></a>
+          </div>
+        </form>
+
+        <!-- Formulário de Login -->
+        <form id="form-login" onsubmit="WagerEngine.handleLogin(event)" style="display: none;">
+          <div class="auth-input-group">
+            <label for="login-identity">USUÁRIO OU E-MAIL:</label>
+            <input type="text" id="login-identity" class="pix-code-input auth-input" placeholder="Seu nome de piloto ou e-mail" required autocomplete="username" />
+          </div>
+
+          <div class="auth-input-group">
+            <label for="login-password">SENHA:</label>
+            <input type="password" id="login-password" class="pix-code-input auth-input" placeholder="Sua senha secreta" required autocomplete="current-password" />
+          </div>
+
+          <div id="login-error-msg" class="auth-error-msg" style="display: none;"></div>
+
+          <button type="submit" id="btn-submit-login" class="btn-start-race" style="margin-top: 14px;">
+            🚀 ENTRAR NO ROADSTER
+          </button>
+
+          <div class="auth-switch-text">
+            Ainda não tem conta? <a href="#" onclick="WagerEngine.setAuthTab('register'); return false;"><b>Cadastre-se grátis</b></a>
           </div>
         </form>
       </div>

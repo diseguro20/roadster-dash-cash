@@ -10,7 +10,11 @@ const now = () => new Date().toISOString();
 // Obter dados do usuário atual
 router.get('/me', verifyAuth, async (req, res) => {
   const user = req.user;
-  const isGuest = Boolean(user.id.startsWith('pilot_') || !user.password_hash);
+  const isGuest = Boolean(!user || user.id.startsWith('pilot_') || !user.password_hash);
+  if (isGuest) {
+    return res.status(401).json({ error: 'É necessário criar uma conta ou fazer login para acessar.' });
+  }
+
   res.json({
     id: user.id,
     username: user.username,
@@ -21,12 +25,12 @@ router.get('/me', verifyAuth, async (req, res) => {
     bonus_balance: user.bonus_balance || 0,
     role: user.role || 'user',
     is_influencer: Boolean(user.is_influencer),
-    is_guest: isGuest,
+    is_guest: false,
     difficulty: store.settings.difficulty || 'hard'
   });
 });
 
-// Criar / autenticar piloto instantâneo (Guest / Piloto Rápido)
+// Criar / autenticar piloto instantâneo (Sem saldo gratuito: saldo exige depósito em conta real)
 router.post('/guest', async (req, res) => {
   try {
     const rawName = (req.body?.name || '').trim();
@@ -40,8 +44,8 @@ router.post('/guest', async (req, res) => {
         username,
         email: `${guestId}@roadsterdash.local`,
         phone: '11999999999',
-        balance: 2000, // R$ 20,00 de crédito cortesia para experimentar o jogo de habilidade!
-        cash_balance: 2000,
+        balance: 0,
+        cash_balance: 0,
         bonus_balance: 0,
         role: 'user',
         status: 'active',
