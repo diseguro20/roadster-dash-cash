@@ -1,0 +1,25 @@
+{
+  "name": "roadster-dash-cash",
+  "version": "1.0.0",
+  "description": "Roadster Dash Cash - Jogo de habilidade e corrida com apostas e PIX via VizzionPay",
+  "main": "api/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node api/index.js",
+    "dev": "node api/index.js",
+    "build": "node -e \"console.log('Build complete')\""
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "firebase-admin": "^13.6.0",
+    "jsonwebtoken": "^9.0.3",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

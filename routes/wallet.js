@@ -1,0 +1,197 @@
+import express from 'express';
+import { store, saveStore, addTransaction, syncToFirestore, updateUser, approveDepositAndCreditUser } from '../lib/database.js';
+import { createVizzionPayPix, checkVizzionPayStatus } from '../lib/vizzionpay.js';
+import { verifyAuth } from '../middleware/auth.js';
+
+const router = express.Router();
+const now = () => new Date().toISOString();
+
+// Consultar saldo
+router.get('/balance', verifyAuth, (req, res) => {
+  const user = req.user;
+  res.json({
+    balance: user.balance || 0,
+    cash_balance: user.cash_balance || 0,
+    bonus_balance: user.bonus_balance || 0
+  });
+});
+
+// Criar depósito PIX via VizzionPay
+router.post('/deposit', verifyAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    const amount = Math.round(Number(req.body?.amount || 0));
+    const minDeposit = Number(store.settings.minDeposit) || 2000; // R$ 20,00
+
+    if (amount < minDeposit) {
+      return res.status(400).json({
+        error: `O depósito mínimo é de R$ ${(minDeposit / 100).toFixed(2).replace('.', ',')}.`
+      });
+    }
+
+    const depositId = `dep_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const bonusPercent = Number(store.settings.bonusPercent || 100);
+    const bonusMin = Number(store.settings.bonusMinDeposit || 2000);
+    const bonusAmount = amount >= bonusMin ? Math.floor((amount * bonusPercent) / 100) : 0;
+
+    const pixData = await createVizzionPayPix({
+      amountCents: amount,
+      customer: {
+        name: user.username,
+        email: user.email,
+        phone: user.phone || '11999999999'
+      },
+      referenceId: depositId
+    });
+
+    const deposit = {
+      id: depositId,
+      uid: user.id,
+      username: user.username,
+      amount,
+      bonusAmount,
+      pixCode: pixData.pixCode,
+      qrCodeUrl: pixData.qrCodeUrl,
+      transactionId: pixData.transactionId,
+      gateway: 'vizzionpay',
+      mode: pixData.mode,
+      status: 'pending',
+      created_at: now()
+    };
+
+    store.deposits.unshift(deposit);
+    saveStore();
+    await syncToFirestore('deposits', deposit.id, deposit);
+
+    return res.json({
+      success: true,
+      depositId: deposit.id,
+      amount,
+      bonusAmount,
+      pixCode: pixData.pixCode,
+      qrCodeUrl: pixData.qrCodeUrl,
+      expiresInSeconds: 600,
+      mode: pixData.mode
+    });
+  } catch (err) {
+    console.error('[Wallet] Erro ao criar depósito:', err);
+    return res.status(500).json({ error: 'Erro ao gerar PIX: ' + err.message });
+  }
+});
+
+// Verificar status do depósito (Polling ativo do front-end)
+router.get('/check-deposit/:id', verifyAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const dep = store.deposits.find(d => d.id === id || d.transactionId === id);
+
+    if (!dep) {
+      return res.status(404).json({ error: 'Depósito não encontrado.' });
+    }
+
+    if (dep.status === 'approved') {
+      const user = req.user;
+      return res.json({
+        status: 'approved',
+        amount: dep.amount,
+        bonusAmount: dep.bonusAmount,
+        balance: user.balance,
+        cash_balance: user.cash_balance,
+        bonus_balance: user.bonus_balance
+      });
+    }
+
+    // Consulta VizzionPay oficial
+    const vpStatus = await checkVizzionPayStatus(dep.transactionId || dep.id);
+    if (vpStatus && vpStatus.status === 'approved') {
+      await approveDepositAndCreditUser(dep.id);
+      const user = req.user;
+      return res.json({
+        status: 'approved',
+        amount: dep.amount,
+        bonusAmount: dep.bonusAmount,
+        balance: user.balance,
+        cash_balance: user.cash_balance,
+        bonus_balance: user.bonus_balance
+      });
+    }
+
+    return res.json({ status: dep.status });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao checar depósito: ' + err.message });
+  }
+});
+
+// Solicitar saque via PIX
+router.post('/withdraw', verifyAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    const amount = Math.round(Number(req.body?.amount || 0));
+    const pixKey = String(req.body?.pixKey || '').trim();
+    const pixType = String(req.body?.pixType || 'cpf').trim();
+    const minWithdrawal = Number(store.settings.minWithdrawal) || 1000; // R$ 10,00
+
+    if (amount < minWithdrawal) {
+      return res.status(400).json({
+        error: `O valor mínimo para saque é de R$ ${(minWithdrawal / 100).toFixed(2).replace('.', ',')}.`
+      });
+    }
+
+    if (!pixKey) {
+      return res.status(400).json({ error: 'Informe sua chave PIX para transferência.' });
+    }
+
+    if ((user.cash_balance || 0) < amount) {
+      return res.status(400).json({ error: 'Saldo em dinheiro insuficiente para este saque.' });
+    }
+
+    // Debita do saldo
+    user.cash_balance -= amount;
+    user.balance = user.cash_balance + (user.bonus_balance || 0);
+
+    const withdrawalId = `wth_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const withdrawal = {
+      id: withdrawalId,
+      uid: user.id,
+      username: user.username,
+      amount,
+      pixKey,
+      pixType,
+      status: 'pending',
+      created_at: now()
+    };
+
+    store.withdrawals.unshift(withdrawal);
+    addTransaction(user.id, 'withdraw', -amount, 'pending', { withdrawalId, pixKey, pixType });
+
+    await updateUser(user.id, {
+      balance: user.balance,
+      cash_balance: user.cash_balance
+    });
+    await syncToFirestore('withdrawals', withdrawal.id, withdrawal);
+
+    return res.json({
+      success: true,
+      message: 'Solicitação de saque PIX enviada com sucesso!',
+      withdrawalId,
+      balance: user.balance,
+      cash_balance: user.cash_balance
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao solicitar saque: ' + err.message });
+  }
+});
+
+// Histórico de transações
+router.get('/history', verifyAuth, (req, res) => {
+  const user = req.user;
+  const userTxs = store.transactions.filter(t => t.uid === user.id).slice(0, 30);
+  res.json({
+    balance: user.balance,
+    cashBalance: user.cash_balance,
+    bonusBalance: user.bonus_balance,
+    transactions: userTxs
+  });
+});
+
+export default router;
