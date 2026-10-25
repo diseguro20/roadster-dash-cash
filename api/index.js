@@ -9,6 +9,7 @@ import authRoutes from '../routes/auth.js';
 import walletRoutes from '../routes/wallet.js';
 import gameRoutes from '../routes/game.js';
 import webhookRoutes from '../routes/webhook.js';
+import adminRoutes from '../routes/admin.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +38,12 @@ app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/wallet', '/wallet'], walletRoutes);
 app.use(['/api/game', '/game'], gameRoutes);
 app.use(['/api/webhook', '/webhook'], webhookRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Rota direta para painel admin
+app.get(['/admin', '/admin/'], (req, res) => {
+  res.sendFile(path.join(publicDir, 'admin', 'index.html'));
+});
 
 // Health check & configurações públicas
 app.get(['/api/health', '/health'], (req, res) => {

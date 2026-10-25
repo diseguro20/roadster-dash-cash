@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roadster Dash Cash — Painel Administrativo</title>
+  <link rel="stylesheet" href="/admin/admin.css">
+  <link rel="icon" type="image/png" href="/icons/roadster-model-192.png">
+</head>
+<body>
+  <!-- Modal de Login Admin se não autenticado -->
+  <div id="admin-login-modal" class="admin-modal-overlay" style="display: none;">
+    <div class="admin-modal-card">
+      <h2 style="margin-bottom: 6px; color: #e82127;">ACESSO ADMINISTRATIVO</h2>
+      <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">Entre com suas credenciais de administrador</p>
+      <div class="form-group">
+        <label>LOGIN / E-MAIL</label>
+        <input type="text" id="admin-login-user" value="diseguro20" />
+      </div>
+      <div class="form-group">
+        <label>SENHA</label>
+        <input type="password" id="admin-login-pass" value="diego2001" />
+      </div>
+      <button class="btn-action btn-approve" style="width: 100%; padding: 12px; font-size: 14px;" onclick="Admin.login()">
+        ACESSAR PAINEL
+      </button>
+    </div>
+  </div>
+
+  <div class="admin-layout" id="admin-app" style="display: none;">
+    <aside class="admin-sidebar">
+      <div class="brand">
+        <span style="font-size: 24px;">🏎️</span>
+        <span class="brand-title">ROADSTER DASH</span>
+      </div>
+      <nav class="side-nav">
+        <button class="nav-item active" onclick="Admin.showTab('overview', this)">
+          📊 <span>Visão Geral</span>
+        </button>
+        <button class="nav-item" onclick="Admin.showTab('users', this)">
+          👥 <span>Jogadores</span>
+        </button>
+        <button class="nav-item" onclick="Admin.showTab('deposits', this)">
+          💳 <span>Depósitos PIX</span>
+        </button>
+        <button class="nav-item" onclick="Admin.showTab('withdrawals', this)">
+          💸 <span>Saques</span>
+        </button>
+        <button class="nav-item" onclick="Admin.showTab('settings', this)">
+          ⚙️ <span>Configurações & Dificuldade</span>
+        </button>
+      </nav>
+      <div class="side-bottom">
+        <div class="system-status">
+          <span class="status-dot"></span>
+          <span>SISTEMA ONLINE</span>
+        </div>
+        <a href="/" style="color: #94a3b8; text-decoration: none;">← Voltar ao Jogo</a>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-header">
+        <div>
+          <small style="color: #94a3b8; font-weight: 700; font-size: 11px;">PAINEL DE CONTROLE</small>
+          <h1 class="page-title" id="admin-section-title">Visão Geral</h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 13px; color: #94a3b8;">Admin: <b style="color: #fff;" id="admin-user-display">diseguro20</b></span>
+          <button class="btn-action btn-reject" onclick="Admin.logout()">Sair</button>
+        </div>
+      </header>
+
+      <!-- ── TAB: OVERVIEW ── -->
+      <section id="tab-overview" class="admin-tab">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">JOGADORES ATIVOS</div>
+            <div class="metric-value" id="stat-users">0</div>
+            <div class="metric-sub" id="stat-influencers">0 influenciadores ativos</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">TOTAL APOSTADO</div>
+            <div class="metric-value" style="color: #ffd166;" id="stat-bets">R$ 0,00</div>
+            <div class="metric-sub" id="stat-games">0 corridas realizadas</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">TOTAL PAGO AOS PILOTOS</div>
+            <div class="metric-value" style="color: #10b981;" id="stat-payouts">R$ 0,00</div>
+            <div class="metric-sub" id="stat-winloss">0 vitórias • 0 derrotas</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">LUCRO DA CASA (GGR)</div>
+            <div class="metric-value" style="color: #38bdf8;" id="stat-profit">R$ 0,00</div>
+            <div class="metric-sub">Retenção da plataforma</div>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">VOLUME TOTAL DE DEPÓSITOS</div>
+            <div class="metric-value" style="color: #10b981;" id="stat-dep-vol">R$ 0,00</div>
+            <div class="metric-sub" id="stat-dep-counts">0 aprovados • 0 pendentes</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">SAQUES PENDENTES</div>
+            <div class="metric-value" style="color: #e82127;" id="stat-with-pend">0</div>
+            <div class="metric-sub">Aguardando aprovação</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">SALDO TOTAL EM CARTEIRAS</div>
+            <div class="metric-value" style="color: #ffd166;" id="stat-wallets">R$ 0,00</div>
+            <div class="metric-sub">Saldo em custódia</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">DIFICULDADE DO JOGO</div>
+            <div class="metric-value" id="stat-diff-badge" style="color: #ff4d4f; font-size: 20px;">MUITO DIFÍCIL</div>
+            <div class="metric-sub">Padrão da plataforma</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── TAB: JOGADORES ── -->
+      <section id="tab-users" class="admin-tab" style="display: none;">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Lista de Jogadores & Pilotos</h3>
+            <input type="text" id="user-search-input" class="table-search" placeholder="🔍 Buscar por nome, email ou telefone..." oninput="Admin.searchUsers(this.value)" />
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Piloto</th>
+                <th>Contato</th>
+                <th>Saldo Dinheiro</th>
+                <th>Modo Influencer</th>
+                <th>Papel</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Carregando pilotos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── TAB: DEPÓSITOS ── -->
+      <section id="tab-deposits" class="admin-tab" style="display: none;">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Depósitos PIX VizzionPay</h3>
+            <button class="btn-action btn-approve" onclick="Admin.loadDeposits()">Atualizar</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Piloto</th>
+                <th>Valor</th>
+                <th>Bônus</th>
+                <th>Status</th>
+                <th>Data</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="deposits-table-body">
+              <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Carregando depósitos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── TAB: SAQUES ── -->
+      <section id="tab-withdrawals" class="admin-tab" style="display: none;">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Solicitações de Saque PIX</h3>
+            <button class="btn-action btn-approve" onclick="Admin.loadWithdrawals()">Atualizar</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Piloto</th>
+                <th>Chave PIX</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="withdrawals-table-body">
+              <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Carregando saques...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── TAB: CONFIGURAÇÕES & DIFICULDADE ── -->
+      <section id="tab-settings" class="admin-tab" style="display: none;">
+        <div class="table-card" style="max-width: 650px;">
+          <h3 style="margin-bottom: 16px; color: #ffd166;">⚙️ Controle de Dificuldade do Jogo</h3>
+          <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 20px; line-height: 1.5;">
+            Configure o nível de dificuldade do jogo Roadster Dash. O modo <b>Muito Difícil</b> garante que jogadores comuns colidam caso não resgatem cedo, enquanto contas com <b>Modo Influencer</b> ativado conseguem alcançar altos multiplicadores facilmente para vídeos.
+          </p>
+          <div class="form-group">
+            <label>NÍVEL DE DIFICULDADE GLOBAL</label>
+            <select id="set-difficulty" onchange="Admin.saveDifficulty(this.value)">
+              <option value="hard">🔥 MUITO DIFÍCIL (Padrão: Tráfego denso e agressivo, exige cashout rápido)</option>
+              <option value="impossible">💀 IMPOSSÍVEL (Lethal: Tráfego extremo, batida garantida após 1.5x)</option>
+              <option value="balanced">⚖️ EQUILIBRADO (Médio)</option>
+              <option value="influencer">⭐ MODO INFLUENCER GLOBAL (Fácil: Quase impossível bater, vitória garantida)</option>
+            </select>
+          </div>
+
+          <h3 style="margin: 24px 0 16px 0; color: #ffd166;">💰 Limites de Apostas e Transações</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label>APOSTA MÍNIMA (R$)</label>
+              <input type="number" id="set-min-bet" value="1.00" step="0.50" />
+            </div>
+            <div class="form-group">
+              <label>APOSTA MÁXIMA (R$)</label>
+              <input type="number" id="set-max-bet" value="500.00" step="10" />
+            </div>
+            <div class="form-group">
+              <label>DEPÓSITO MÍNIMO (R$)</label>
+              <input type="number" id="set-min-dep" value="20.00" step="5" />
+            </div>
+            <div class="form-group">
+              <label>SAQUE MÍNIMO (R$)</label>
+              <input type="number" id="set-min-with" value="10.00" step="5" />
+            </div>
+          </div>
+          <button class="btn-action btn-approve" style="padding: 12px 24px; font-size: 14px; margin-top: 10px;" onclick="Admin.saveLimits()">
+            SALVAR CONFIGURAÇÕES
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal de Edição de Saldo -->
+  <div id="modal-edit-user" class="admin-modal-overlay" style="display: none;">
+    <div class="admin-modal-card">
+      <h3 style="margin-bottom: 12px; color: #ffd166;">Editar Saldo do Piloto</h3>
+      <div class="form-group">
+        <label>PILOTO</label>
+        <input type="text" id="edit-user-name" readonly style="opacity: 0.7;" />
+      </div>
+      <div class="form-group">
+        <label>NOVO SALDO EM DINHEIRO (R$)</label>
+        <input type="number" id="edit-user-cash" step="10" />
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 16px;">
+        <button class="btn-action btn-approve" style="flex: 1; padding: 10px;" onclick="Admin.saveUserBalance()">SALVAR</button>
+        <button class="btn-action btn-reject" style="flex: 1; padding: 10px;" onclick="document.getElementById('modal-edit-user').style.display='none'">CANCELAR</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

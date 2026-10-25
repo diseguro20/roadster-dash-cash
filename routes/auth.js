@@ -17,7 +17,9 @@ router.get('/me', verifyAuth, async (req, res) => {
     balance: user.balance || 0,
     cash_balance: user.cash_balance || 0,
     bonus_balance: user.bonus_balance || 0,
-    role: user.role || 'user'
+    role: user.role || 'user',
+    is_influencer: Boolean(user.is_influencer),
+    difficulty: store.settings.difficulty || 'hard'
   });
 });
 

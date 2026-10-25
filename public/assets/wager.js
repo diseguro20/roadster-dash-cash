@@ -1,6 +1,7 @@
 /**
- * ROADSTER DASH CASH - SKILL WAGERING & PIX ENGINE
- * Gerenciador de apostas por habilidade, VizzionPay PIX e integrador de HUD
+ * ROADSTER DASH CASH - SKILL WAGERING & CASHOUT ENGINE (V2 OTIMIZADA)
+ * Sem travamentos, 60+ FPS em mobile, controle de aposta obrigatório,
+ * tecla de saque independente (C / Toque) e modal de derrota com revanche.
  */
 
 (function () {
@@ -13,21 +14,21 @@
       inProgress: false,
       mode: 'real', // 'real' | 'demo'
       betAmount: 200, // em centavos (R$ 2,00)
+      hasSelectedBet: true,
       sessionId: null,
       multiplier: 1.0,
       cashedOut: false,
       distance: 0
     },
-    demoBalance: 5000, // R$ 50,00 demo
+    demoBalance: 5000,
     pollingTimer: null,
+    _lastHudUpdate: 0,
 
-    // Formata centavos em BRL
     formatBRL(cents) {
       const v = (Number(cents || 0) / 100);
       return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     },
 
-    // Notificação Toast
     showToast(msg, duration = 4000) {
       let toast = document.getElementById('wager-toast');
       if (!toast) {
@@ -44,7 +45,6 @@
       }, duration);
     },
 
-    // Requisição com autenticação
     async api(url, options = {}) {
       const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
       if (this.token) {
@@ -58,23 +58,20 @@
       return data;
     },
 
-    // Inicialização
     async init() {
-      console.log('🏎️ [WagerEngine] Inicializando motor de apostas Roadster Dash Cash...');
+      console.log('🏎️ [WagerEngine] Inicializando motor de apostas fluido 60 FPS...');
       this.bindHooks();
       await this.loadUser();
       this.initBetControls();
       this.updateBalanceUI();
     },
 
-    // Carrega usuário ou cria convidado
     async loadUser() {
       try {
         if (this.token) {
           const data = await this.api('/api/auth/me');
           this.user = data;
         } else {
-          // Cria piloto guest imediato para o jogador não perder tempo
           const guest = await this.api('/api/auth/guest', {
             method: 'POST',
             body: JSON.stringify({ name: localStorage.getItem('pilot_name') || '' })
@@ -84,7 +81,7 @@
           this.user = guest.user;
         }
       } catch (err) {
-        console.warn('[WagerEngine] Falha ao carregar sessão, gerando nova:', err.message);
+        console.warn('[WagerEngine] Sessão renovada.');
         try {
           const guest = await this.api('/api/auth/guest', { method: 'POST' });
           this.token = guest.token;
@@ -92,10 +89,18 @@
           this.user = guest.user;
         } catch (_) {}
       }
+
+      // Sincroniza modo influenciador com o motor 3D
+      if (this.user && (this.user.is_influencer || this.user.difficulty === 'influencer')) {
+        window.__isInfluencerActive = true;
+        console.log('⭐ [WagerEngine] MODO INFLUENCER ATIVADO para este piloto!');
+      } else {
+        window.__isInfluencerActive = false;
+      }
+
       this.updateBalanceUI();
     },
 
-    // Atualiza saldo na tela
     updateBalanceUI() {
       const balanceEl = document.getElementById('topbar-balance');
       if (!balanceEl) return;
@@ -111,11 +116,10 @@
 
       const pilotEl = document.getElementById('topbar-pilot');
       if (pilotEl && this.user) {
-        pilotEl.textContent = this.user.username;
+        pilotEl.innerHTML = `${this.user.username} ${this.user.is_influencer ? '<span style="color:#ffd166;font-size:11px;">⭐ INFLUENCER</span>' : ''}`;
       }
     },
 
-    // Configura botões de aposta no lobby
     initBetControls() {
       const input = document.getElementById('wager-amount-input');
       const quickBtns = document.querySelectorAll('.quick-btn');
@@ -127,6 +131,7 @@
         input.addEventListener('change', () => {
           let val = Math.max(1, parseFloat(input.value) || 1);
           this.activeWager.betAmount = Math.round(val * 100);
+          this.activeWager.hasSelectedBet = true;
           input.value = (this.activeWager.betAmount / 100).toFixed(2);
           this.updateStartButtonLabel();
         });
@@ -137,6 +142,7 @@
           const val = parseFloat(btn.dataset.val);
           if (val) {
             this.activeWager.betAmount = Math.round(val * 100);
+            this.activeWager.hasSelectedBet = true;
             if (input) input.value = val.toFixed(2);
             quickBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -162,10 +168,9 @@
         });
       }
 
-      // Atalho de Cashout via Teclado (Tecla Espaço ou C durante o jogo)
+      // Atalho de Cashout no PC: Tecla C ou Enter (Espaço estritamente reservado para Pular)
       window.addEventListener('keydown', (e) => {
-        if ((e.code === 'Space' || e.code === 'KeyC') && this.activeWager.inProgress && !this.activeWager.cashedOut) {
-          // Se o HUD de cashout estiver visível e a corrida rolando
+        if ((e.code === 'KeyC' || e.code === 'KeyX' || e.code === 'Enter') && this.activeWager.inProgress && !this.activeWager.cashedOut) {
           const hud = document.getElementById('wager-hud');
           if (hud && hud.style.display !== 'none') {
             e.preventDefault();
@@ -188,13 +193,25 @@
       }
     },
 
-    // Inicia a corrida valendo aposta
     async startWagerRace() {
+      // 1. Exige seleção explícita de valor
+      if (!this.activeWager.hasSelectedBet || !this.activeWager.betAmount || this.activeWager.betAmount < 100) {
+        this.showToast('⚠️ Escolha o valor da aposta antes de iniciar a corrida!');
+        const box = document.querySelector('.quick-bet-grid');
+        if (box) {
+          box.style.border = '1px solid #e82127';
+          setTimeout(() => { box.style.border = 'none'; }, 2000);
+        }
+        return;
+      }
+
       const amount = this.activeWager.betAmount;
 
+      // 2. Sempre verifica saldo na conta
       if (this.activeWager.mode === 'real') {
-        if (!this.user || (this.user.balance || 0) < amount) {
-          this.showToast('⚠️ Saldo insuficiente! Faça um depósito via PIX para continuar.');
+        const currentBalance = (this.user?.balance != null) ? this.user.balance : 0;
+        if (currentBalance < amount) {
+          this.showToast(`⚠️ Saldo insuficiente! Você possui ${this.formatBRL(currentBalance)} e escolheu apostar ${this.formatBRL(amount)}. Faça um PIX para jogar.`);
           this.openDepositModal();
           return;
         }
@@ -222,9 +239,7 @@
         }
       } else {
         // Modo Demo
-        if (this.demoBalance < amount) {
-          this.demoBalance += 10000; // Recarrega demo
-        }
+        if (this.demoBalance < amount) this.demoBalance += 10000;
         this.demoBalance -= amount;
         this.activeWager.sessionId = 'demo_' + Date.now();
         this.activeWager.inProgress = true;
@@ -234,17 +249,20 @@
         this.updateBalanceUI();
       }
 
-      // Ativa o HUD de Cashout
+      // Fecha modais anteriores se abertos
+      const lossModal = document.getElementById('loss-revanche-modal');
+      if (lossModal) lossModal.style.display = 'none';
+      const winModal = document.getElementById('win-modal');
+      if (winModal) winModal.style.display = 'none';
+
+      // Ativa HUD de Cashout
       this.showCashoutHUD();
 
-      // Dispara o jogo Roadster original
+      // Dispara o motor 3D
       const origPlayBtn = document.getElementById('play-btn');
-      if (origPlayBtn) {
-        origPlayBtn.click();
-      }
+      if (origPlayBtn) origPlayBtn.click();
     },
 
-    // Mostra HUD de Cashout em tempo real
     showCashoutHUD() {
       let hud = document.getElementById('wager-hud');
       if (!hud) {
@@ -267,17 +285,22 @@
         cashoutBtnContainer.innerHTML = `
           <button class="btn-cashout" id="btn-cashout">
             <span id="cashout-label">💰 RESGATAR</span>
-            <span class="cashout-shortcut">ESPAÇO</span>
+            <span class="cashout-shortcut">TECLA C</span>
           </button>
         `;
         document.body.appendChild(cashoutBtnContainer);
-        document.getElementById('btn-cashout').addEventListener('click', () => {
+
+        const btn = document.getElementById('btn-cashout');
+        const trigger = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           this.executeCashout();
-        });
+        };
+        btn.addEventListener('touchstart', trigger, { passive: false });
+        btn.addEventListener('click', trigger);
       }
       cashoutBtnContainer.style.display = 'block';
 
-      // Inicia loop de leitura de distância e multiplicador
       this.startMultiplierLoop();
     },
 
@@ -288,40 +311,34 @@
       if (btn) btn.style.display = 'none';
     },
 
-    // Loop do multiplicador em tempo real baseado na distância percorrida
+    // Loop ultra-fluido: 0 leituras pesadas no DOM dentro do rAF
     startMultiplierLoop() {
       const multEl = document.getElementById('wager-mult-live');
       const profitEl = document.getElementById('wager-profit-live');
       const cashoutLabel = document.getElementById('cashout-label');
+      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 800;
 
-      const tick = () => {
+      const tick = (now) => {
         if (!this.activeWager.inProgress || this.activeWager.cashedOut) return;
 
-        // Lê distância do jogo original
-        let currentDist = 0;
-        if (window.__qt && window.__qt.distance != null) {
-          currentDist = window.__qt.distance;
-        } else {
-          const distEl = document.getElementById('dist');
-          if (distEl) {
-            currentDist = parseFloat(distEl.textContent.replace(/[^\d.-]/g, '')) || 0;
-          }
-        }
-
+        // Leitura direta de memória do Three.js (sem tocar no layout DOM)
+        const currentDist = (window.__qt && window.__qt.distance != null) ? window.__qt.distance : 0;
         this.activeWager.distance = Math.floor(currentDist);
 
-        // Curva emocionante de multiplicador por habilidade
-        // 0m = 1.00x | 100m = 1.28x | 250m = 1.75x | 500m = 2.65x | 1000m = 4.80x | 2000m = 10.20x
-        let mult = 1.0 + Math.pow(Math.max(0, currentDist) / 110, 1.12) * 0.32;
+        // Curva de multiplicador
+        let mult = 1.0 + Math.pow(Math.max(0, currentDist) / 105, 1.12) * 0.32;
         mult = Math.min(100.0, Math.max(1.0, mult));
         this.activeWager.multiplier = mult;
 
-        const currentProfitCents = Math.floor(this.activeWager.betAmount * mult);
-
-        if (multEl) multEl.textContent = `${mult.toFixed(2)}x`;
-        if (profitEl) profitEl.textContent = this.formatBRL(currentProfitCents);
-        if (cashoutLabel) {
-          cashoutLabel.innerHTML = `💰 RESGATAR ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x)`;
+        // Limita a atualização dos textos para 15 vezes/segundo para eliminar jank
+        if (now - this._lastHudUpdate > 66) {
+          this._lastHudUpdate = now;
+          const currentProfitCents = Math.floor(this.activeWager.betAmount * mult);
+          if (multEl) multEl.textContent = `${mult.toFixed(2)}x`;
+          if (profitEl) profitEl.textContent = this.formatBRL(currentProfitCents);
+          if (cashoutLabel) {
+            cashoutLabel.innerHTML = `💰 RESGATAR ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x)`;
+          }
         }
 
         requestAnimationFrame(tick);
@@ -330,7 +347,6 @@
       requestAnimationFrame(tick);
     },
 
-    // Executa o Cashout com sucesso (Resgate da aposta)
     async executeCashout() {
       if (!this.activeWager.inProgress || this.activeWager.cashedOut) return;
       this.activeWager.cashedOut = true;
@@ -365,14 +381,10 @@
       }
 
       this.hideCashoutHUD();
-
-      // Reproduz som de vitória
       this.playWinSound();
-
-      // Exibe tela comemorativa de vitória
       this.showWinModal(payoutCents, mult, distance);
 
-      // Finaliza a corrida no motor original
+      // Congela corrida com segurança
       if (window.__qt && window.__qt.onGameOver) {
         window.__qt.onGameOver({
           score: Math.floor(window.__qt.score || distance * 10),
@@ -382,12 +394,13 @@
       }
     },
 
-    // Hook disparado pelo jogo original ao bater / game over
+    // Derrota / Batida no Tráfego: Exibe Pop-up de Revanche com Seleção de Aposta
     async onGameOver(details) {
       this.hideCashoutHUD();
 
       if (this.activeWager.inProgress && !this.activeWager.cashedOut) {
         this.activeWager.inProgress = false;
+        const lostAmount = this.activeWager.betAmount;
 
         if (this.activeWager.mode === 'real') {
           try {
@@ -403,39 +416,99 @@
           } catch (_) {}
         }
 
-        // Injeta aviso de aposta perdida no Game Over
-        const goCard = document.querySelector('.go-card');
-        if (goCard) {
-          let lossBanner = document.getElementById('wager-loss-banner');
-          if (!lossBanner) {
-            lossBanner = document.createElement('div');
-            lossBanner.id = 'wager-loss-banner';
-            lossBanner.style.cssText = 'background: rgba(232, 33, 39, 0.2); border: 1px solid #e82127; border-radius: 8px; padding: 12px; margin: 12px 0; text-align: center; color: #fff; font-family: "Rajdhani", sans-serif;';
-            goCard.insertBefore(lossBanner, goCard.firstChild);
-          }
-          const betFormatted = this.formatBRL(this.activeWager.betAmount);
-          lossBanner.innerHTML = `
-            <strong style="color: #ff4d4f; font-size: 16px; display: block; margin-bottom: 4px;">💥 BATEU ANTES DE RESGATAR!</strong>
-            <span style="font-size: 13px; color: #cbd5e1;">Aposta de <b>${betFormatted}</b> perdida no tráfego. Desvie com mais cuidado na próxima corrida!</span>
-          `;
-        }
+        // Abre Pop-up de Revanche imediato
+        this.showLossRevancheModal(lostAmount);
       }
     },
 
-    // Conecta com os hooks injetados no game.js
     bindHooks() {
       window.__onGameOverHook = (details) => {
         this.onGameOver(details);
       };
-
-      window.__onGameStartHook = (qtInstance) => {
-        // Remove banner de perda anterior
-        const prevLoss = document.getElementById('wager-loss-banner');
-        if (prevLoss) prevLoss.remove();
+      window.__onGameStartHook = () => {
+        const lossModal = document.getElementById('loss-revanche-modal');
+        if (lossModal) lossModal.style.display = 'none';
       };
     },
 
-    // Modal de Vitória / Resgate Concluído
+    // Modal de Derrota / Revanche
+    showLossRevancheModal(lostAmountCents) {
+      let modal = document.getElementById('loss-revanche-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'loss-revanche-modal';
+        modal.className = 'wager-modal-overlay';
+        document.body.appendChild(modal);
+      }
+
+      const balance = (this.activeWager.mode === 'real') ? (this.user?.balance || 0) : this.demoBalance;
+      const currentBet = this.activeWager.betAmount || 200;
+      const hasBalance = balance >= currentBet;
+
+      modal.innerHTML = `
+        <div class="wager-modal-card" style="border-color: #e82127; text-align: center;">
+          <div style="font-size: 50px; margin-bottom: 8px;">💥</div>
+          <div class="modal-heading" style="color: #ff4d4f;">VOCÊ BATEU NO TRÁFEGO!</div>
+          <div class="modal-sub">Aposta de <b>${this.formatBRL(lostAmountCents)}</b> perdida. Deseja correr novamente?</div>
+
+          <div style="background: rgba(20, 24, 38, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 12px; color: #94a3b8;">SEU SALDO:</span>
+            <strong style="font-size: 18px; color: #ffd166; font-family: monospace;">${this.formatBRL(balance)}</strong>
+          </div>
+
+          <div style="font-size: 11px; color: #94a3b8; font-weight: 700; text-align: left; margin-bottom: 6px;">SELECIONE O VALOR DA PRÓXIMA APOSTA:</div>
+          <div class="quick-bet-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 14px;">
+            <button class="quick-btn ${currentBet === 100 ? 'active' : ''}" onclick="WagerEngine.setRevancheBet(100, this)">R$ 1</button>
+            <button class="quick-btn ${currentBet === 200 ? 'active' : ''}" onclick="WagerEngine.setRevancheBet(200, this)">R$ 2</button>
+            <button class="quick-btn ${currentBet === 500 ? 'active' : ''}" onclick="WagerEngine.setRevancheBet(500, this)">R$ 5</button>
+            <button class="quick-btn ${currentBet === 1000 ? 'active' : ''}" onclick="WagerEngine.setRevancheBet(1000, this)">R$ 10</button>
+            <button class="quick-btn ${currentBet === 2000 ? 'active' : ''}" onclick="WagerEngine.setRevancheBet(2000, this)">R$ 20</button>
+            <button class="quick-btn ${currentBet === 5000 ? 'active' : ''}" onclick="WagerEngine.setRevancheBet(5000, this)">R$ 50</button>
+          </div>
+
+          <div id="revanche-action-btn-area">
+            ${hasBalance ? `
+              <button class="btn-start-race" onclick="WagerEngine.startWagerRace()" style="margin-bottom: 8px;">
+                🏎️ JOGAR NOVAMENTE (${this.formatBRL(currentBet)})
+              </button>
+            ` : `
+              <button class="btn-start-race" onclick="WagerEngine.openDepositModal()" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px;">
+                ⚡ DEPOSITAR VIA PIX (SALDO INSUFICIENTE)
+              </button>
+            `}
+          </div>
+
+          <button class="btn-top btn-with" style="width: 100%; justify-content: center;" onclick="document.getElementById('loss-revanche-modal').style.display='none'">
+            🏠 VOLTAR AO LOBBY
+          </button>
+        </div>
+      `;
+      modal.style.display = 'flex';
+    },
+
+    setRevancheBet(cents, btn) {
+      this.activeWager.betAmount = cents;
+      this.activeWager.hasSelectedBet = true;
+      document.querySelectorAll('#loss-revanche-modal .quick-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const balance = (this.activeWager.mode === 'real') ? (this.user?.balance || 0) : this.demoBalance;
+      const hasBalance = balance >= cents;
+      const area = document.getElementById('revanche-action-btn-area');
+      if (area) {
+        area.innerHTML = hasBalance ? `
+          <button class="btn-start-race" onclick="WagerEngine.startWagerRace()" style="margin-bottom: 8px;">
+            🏎️ JOGAR NOVAMENTE (${this.formatBRL(cents)})
+          </button>
+        ` : `
+          <button class="btn-start-race" onclick="WagerEngine.openDepositModal()" style="background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 8px;">
+            ⚡ DEPOSITAR VIA PIX (SALDO INSUFICIENTE)
+          </button>
+        `;
+      }
+      this.updateStartButtonLabel();
+    },
+
     showWinModal(payoutCents, multiplier, distance) {
       let modal = document.getElementById('win-modal');
       if (!modal) {
@@ -446,32 +519,29 @@
       }
 
       modal.innerHTML = `
-        <div class="wager-modal-card" style="border-color: #10b981;">
+        <div class="wager-modal-card" style="border-color: #10b981; text-align: center;">
           <div class="win-trophy">🏆</div>
           <div class="modal-heading" style="color: #6ee7b7;">RESGATE CONCLUÍDO!</div>
-          <div class="modal-sub">Você pilotou com maestria e garantiu seu lucro!</div>
+          <div class="modal-sub">Você pilotou com precisão e resgatou com lucro!</div>
           <div class="win-amount-badge">
-            <span style="font-size: 13px; color: #94a3b8; display: block; margin-bottom: 4px;">LUCRO RESGATADO:</span>
+            <span style="font-size: 13px; color: #94a3b8; display: block; margin-bottom: 4px;">LUCRO TOTAL:</span>
             <div class="win-payout-text">+ ${this.formatBRL(payoutCents)}</div>
-            <div style="font-size: 14px; color: #ffd166; margin-top: 6px; font-family: 'Share Tech Mono', monospace;">
+            <div style="font-size: 14px; color: #ffd166; margin-top: 6px; font-family: monospace;">
               MULTIPLICADOR: <b>${multiplier.toFixed(2)}x</b> | DISTÂNCIA: <b>${distance}m</b>
             </div>
           </div>
-          <button class="btn-start-race" id="btn-win-replay" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 14px;">
-            🏁 NOVA CORRIDA
+          <button class="btn-start-race" onclick="WagerEngine.startWagerRace()" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 14px;">
+            🏁 CORRER NOVAMENTE
+          </button>
+          <button class="btn-top btn-with" style="width: 100%; justify-content: center; margin-top: 8px;" onclick="document.getElementById('win-modal').style.display='none'">
+            🏠 MENU PRINCIPAL
           </button>
         </div>
       `;
       modal.style.display = 'flex';
-
-      document.getElementById('btn-win-replay').addEventListener('click', () => {
-        modal.style.display = 'none';
-        const retryBtn = document.getElementById('retry-btn') || document.getElementById('play-btn');
-        if (retryBtn) retryBtn.click();
-      });
     },
 
-    // Modal de Depósito PIX VizzionPay
+    // Depósito PIX VizzionPay
     openDepositModal() {
       let modal = document.getElementById('deposit-modal');
       if (!modal) {
@@ -485,13 +555,13 @@
         <div class="wager-modal-card">
           <button class="modal-close-btn" onclick="document.getElementById('deposit-modal').style.display='none'">×</button>
           <div class="modal-heading">DEPOSITAR VIA PIX</div>
-          <div class="modal-sub">Crédito instantâneo e seguro via VizzionPay</div>
+          <div class="modal-sub">Crédito instantâneo via VizzionPay</div>
 
           <div class="promo-badge">
             <span style="font-size: 20px;">🎁</span>
             <div>
-              <strong style="color: #ffd166; display: block;">+100% DE BÔNUS NO PRIMEIRO DEPÓSITO!</strong>
-              <span style="font-size: 11px; color: #cbd5e1;">Deposite a partir de R$ 20 e dobre seu saldo para jogar.</span>
+              <strong style="color: #ffd166; display: block;">+100% DE BÔNUS ATIVO!</strong>
+              <span style="font-size: 11px; color: #cbd5e1;">Deposite a partir de R$ 20 e dobre seu saldo.</span>
             </div>
           </div>
 
@@ -525,7 +595,6 @@
       if (input) input.value = val;
     },
 
-    // Gera o PIX oficial no backend
     async generatePixDeposit() {
       const input = document.getElementById('dep-val-input');
       const val = parseFloat(input?.value || '20');
@@ -567,8 +636,6 @@
         }
 
         if (btn) btn.style.display = 'none';
-
-        // Inicia verificação automática do pagamento (Polling)
         this.startDepositPolling(res.depositId);
       } catch (err) {
         this.showToast('Erro ao gerar PIX: ' + err.message);
@@ -588,7 +655,6 @@
       }
     },
 
-    // Consulta automática a cada 3.5 segundos até o PIX ser pago
     startDepositPolling(depositId) {
       if (this.pollingTimer) clearInterval(this.pollingTimer);
 
@@ -620,13 +686,12 @@
             }
 
             this.playWinSound();
-            this.showToast('🎉 Pagamento confirmado! Saldo disponível para jogar.');
+            this.showToast('🎉 Pagamento confirmado! Saldo creditado.');
           }
         } catch (_) {}
       }, 3500);
     },
 
-    // Modal de Saque PIX
     openWithdrawModal() {
       let modal = document.getElementById('withdraw-modal');
       if (!modal) {
@@ -642,11 +707,11 @@
         <div class="wager-modal-card">
           <button class="modal-close-btn" onclick="document.getElementById('withdraw-modal').style.display='none'">×</button>
           <div class="modal-heading">SACAR VIA PIX</div>
-          <div class="modal-sub">Transferência rápida direto na sua chave PIX</div>
+          <div class="modal-sub">Transferência direta para sua chave PIX</div>
 
           <div style="background: rgba(20, 24, 38, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
             <span style="font-size: 12px; color: #94a3b8; display: block;">Saldo disponível para saque:</span>
-            <strong style="font-size: 20px; color: #ffd166; font-family: 'Share Tech Mono', monospace;">${available}</strong>
+            <strong style="font-size: 20px; color: #ffd166; font-family: monospace;">${available}</strong>
           </div>
 
           <div style="font-size: 12px; color: #94a3b8; font-weight: 700; margin-bottom: 6px;">TIPO DE CHAVE:</div>
@@ -711,12 +776,11 @@
       }
     },
 
-    // Síntese de áudio para celebração de vitória
     playWinSound() {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const now = ctx.currentTime;
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
@@ -734,7 +798,6 @@
   };
 
   window.WagerEngine = WagerEngine;
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => WagerEngine.init());
   } else {

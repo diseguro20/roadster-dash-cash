@@ -1,6 +1,5 @@
 /* ==========================================================================
-   ROADSTER DASH CASH - SKILL WAGERING & PIX UI STYLES
-   Ultra-modern Tesla Cyberpunk Glassmorphism
+   ROADSTER DASH CASH - SKILL WAGERING & PIX UI STYLES (V2 ULTRA-OTIMIZADA)
    ========================================================================== */
 
 :root {
@@ -11,7 +10,7 @@
   --wager-green: #10b981;
   --wager-green-glow: rgba(16, 185, 129, 0.45);
   --wager-dark: #0a0a0f;
-  --wager-card-bg: rgba(14, 16, 24, 0.88);
+  --wager-card-bg: rgba(14, 16, 24, 0.92);
   --wager-border: rgba(255, 255, 255, 0.12);
 }
 
@@ -24,11 +23,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 24px;
+  padding: 12px 20px;
   background: linear-gradient(180deg, rgba(10, 10, 15, 0.95) 0%, rgba(10, 10, 15, 0.6) 80%, transparent 100%);
   z-index: 100;
   box-sizing: border-box;
   font-family: 'Rajdhani', sans-serif;
+  pointer-events: auto;
 }
 
 .topbar-brand {
@@ -46,7 +46,6 @@
   padding: 3px 8px;
   border-radius: 4px;
   text-transform: uppercase;
-  box-shadow: 0 0 12px var(--wager-red-glow);
 }
 
 .topbar-title {
@@ -59,19 +58,17 @@
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* Saldo Badge */
 .balance-card {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(20, 24, 38, 0.8);
+  background: rgba(20, 24, 38, 0.85);
   border: 1px solid rgba(255, 209, 102, 0.3);
   padding: 6px 14px;
   border-radius: 8px;
-  backdrop-filter: blur(10px);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
@@ -79,44 +76,41 @@
   font-size: 12px;
   color: #94a3b8;
   font-weight: 600;
-  letter-spacing: 0.5px;
 }
 
 .balance-val {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--wager-gold);
-  font-family: 'Share Tech Mono', monospace;
-  text-shadow: 0 0 10px var(--wager-gold-glow);
+  font-family: monospace;
 }
 
-/* Botões Topbar */
 .btn-top {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 8px 14px;
   border-radius: 8px;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
   border: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.15s ease;
   text-transform: uppercase;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-top:active {
+  transform: scale(0.96);
 }
 
 .btn-dep {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #ffffff;
-  box-shadow: 0 0 16px var(--wager-green-glow);
-}
-
-.btn-dep:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 24px var(--wager-green-glow);
-  filter: brightness(1.1);
+  box-shadow: 0 0 12px var(--wager-green-glow);
 }
 
 .btn-with {
@@ -125,20 +119,14 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.btn-with:hover {
-  background: rgba(45, 52, 75, 0.95);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-/* ── Lobby Wagering Box (Painel de Aposta no Menu) ── */
+/* ── Lobby Wagering Box ── */
 .wager-box {
   background: var(--wager-card-bg);
   border: 1px solid var(--wager-border);
   border-radius: 12px;
-  padding: 18px 20px;
-  margin: 16px 0 20px 0;
+  padding: 16px 18px;
+  margin: 14px 0 18px 0;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(16px);
   width: 100%;
   box-sizing: border-box;
 }
@@ -147,7 +135,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   background: rgba(10, 12, 18, 0.7);
   padding: 4px;
   border-radius: 8px;
@@ -158,20 +146,18 @@
   border: none;
   color: #94a3b8;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
   text-align: center;
+  transition: all 0.15s;
 }
 
 .mode-btn.active {
   background: linear-gradient(135deg, #e82127, #c5161b);
   color: #fff;
-  box-shadow: 0 2px 10px var(--wager-red-glow);
 }
 
 .wager-header {
@@ -182,7 +168,7 @@
 }
 
 .wager-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: #94a3b8;
   letter-spacing: 1px;
@@ -197,23 +183,23 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   padding: 8px 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .wager-currency {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--wager-gold);
-  font-family: 'Share Tech Mono', monospace;
+  font-family: monospace;
 }
 
 .wager-input {
   background: transparent;
   border: none;
   color: #fff;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: monospace;
   width: 100%;
   outline: none;
 }
@@ -222,27 +208,29 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .quick-btn {
   background: rgba(25, 30, 45, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: monospace;
   font-size: 13px;
   font-weight: 700;
-  padding: 7px 4px;
+  padding: 8px 4px;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 0.1s ease, border-color 0.1s ease;
   text-align: center;
+  touch-action: manipulation;
 }
 
 .quick-btn:hover, .quick-btn.active {
-  background: rgba(232, 33, 39, 0.25);
+  background: rgba(232, 33, 39, 0.3);
   border-color: var(--wager-red);
   color: #fff;
+  box-shadow: 0 0 10px rgba(232, 33, 39, 0.4);
 }
 
 .btn-start-race {
@@ -251,33 +239,27 @@
   color: #ffffff;
   border: none;
   border-radius: 10px;
-  padding: 16px 20px;
+  padding: 15px 20px;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: 2px;
   cursor: pointer;
   text-transform: uppercase;
-  box-shadow: 0 6px 24px var(--wager-red-glow);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-}
-
-.btn-start-race:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 32px var(--wager-red-glow);
-  filter: brightness(1.1);
+  transition: transform 0.15s ease;
+  touch-action: manipulation;
 }
 
 .btn-start-race:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
 .wager-rules-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
   margin-top: 10px;
   line-height: 1.4;
@@ -287,7 +269,7 @@
 /* ── In-Game Cashout HUD ── */
 #wager-hud {
   position: absolute;
-  top: 70px;
+  top: 65px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -307,7 +289,6 @@
   border: 1px solid rgba(255, 209, 102, 0.4);
   padding: 8px 20px;
   border-radius: 30px;
-  backdrop-filter: blur(12px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
 }
 
@@ -315,54 +296,52 @@
   font-size: 24px;
   font-weight: 700;
   color: var(--wager-gold);
-  font-family: 'Share Tech Mono', monospace;
-  text-shadow: 0 0 12px var(--wager-gold-glow);
+  font-family: monospace;
 }
 
 .profit-live {
   font-size: 18px;
   font-weight: 700;
   color: var(--wager-green);
-  font-family: 'Share Tech Mono', monospace;
-  text-shadow: 0 0 10px var(--wager-green-glow);
+  font-family: monospace;
 }
 
-/* Botão Flutuante de Cashout */
+/* Botão Flutuante de Cashout (Fixo e Otimizado para Mobile e PC) */
 #btn-cashout-container {
-  position: absolute;
-  bottom: 120px;
+  position: fixed;
+  bottom: 80px;
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 90;
+  transform: translate3d(-50%, 0, 0);
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+  will-change: transform;
 }
 
 .btn-cashout {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  padding: 16px 36px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  padding: 16px 34px;
   border-radius: 40px;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   cursor: pointer;
   text-transform: uppercase;
-  box-shadow: 0 0 35px var(--wager-green-glow), 0 10px 25px rgba(0, 0, 0, 0.6);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 12px;
-  animation: pulse-glow 1.5s infinite;
-}
-
-.btn-cashout:hover {
-  transform: scale(1.06);
-  box-shadow: 0 0 50px var(--wager-green-glow);
+  box-shadow: 0 0 25px var(--wager-green-glow), 0 8px 20px rgba(0, 0, 0, 0.6);
+  transition: transform 0.1s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .btn-cashout:active {
-  transform: scale(0.98);
+  transform: scale(0.95);
+  filter: brightness(1.2);
 }
 
 .cashout-shortcut {
@@ -371,26 +350,19 @@
   padding: 3px 8px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  font-family: 'Share Tech Mono', monospace;
+  font-family: monospace;
 }
 
-@keyframes pulse-glow {
-  0% { box-shadow: 0 0 25px var(--wager-green-glow); }
-  50% { box-shadow: 0 0 45px var(--wager-green-glow); }
-  100% { box-shadow: 0 0 25px var(--wager-green-glow); }
-}
-
-/* ── Modais de Aposta / Vitória / Depósito / Saque ── */
+/* Modais */
 .wager-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(5, 6, 10, 0.88);
-  backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  z-index: 1000000;
+  padding: 16px;
   box-sizing: border-box;
 }
 
@@ -398,51 +370,41 @@
   background: #0f121d;
   border: 1px solid var(--wager-border);
   border-radius: 16px;
-  padding: 28px 24px;
-  max-width: 440px;
+  padding: 24px 20px;
+  max-width: 420px;
   width: 100%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
   position: relative;
   font-family: 'Rajdhani', sans-serif;
   color: #fff;
-  animation: modal-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes modal-enter {
-  from { opacity: 0; transform: scale(0.92) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 14px;
+  right: 14px;
   background: transparent;
   border: none;
   color: #94a3b8;
   font-size: 24px;
   cursor: pointer;
-  line-height: 1;
 }
 
 .modal-heading {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: 1px;
   margin-bottom: 6px;
-  text-align: center;
 }
 
 .modal-sub {
   font-size: 13px;
   color: #94a3b8;
-  text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
-/* Promoção e Bônus */
 .promo-badge {
-  background: linear-gradient(135deg, rgba(232, 33, 39, 0.2), rgba(255, 209, 102, 0.2));
+  background: rgba(255, 209, 102, 0.12);
   border: 1px solid var(--wager-gold);
   border-radius: 8px;
   padding: 10px 14px;
@@ -450,31 +412,29 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: 12px;
 }
 
-/* PIX Box */
 .pix-qr-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  margin: 16px 0;
+  gap: 12px;
+  margin: 14px 0;
 }
 
 .pix-qr-img {
-  width: 200px;
-  height: 200px;
+  width: 180px;
+  height: 180px;
   background: #fff;
-  padding: 10px;
+  padding: 8px;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .pix-code-box {
   width: 100%;
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .pix-code-input {
@@ -482,7 +442,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   color: #cbd5e1;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: monospace;
   font-size: 11px;
   padding: 10px;
   width: 100%;
@@ -493,94 +453,58 @@
   background: var(--wager-gold);
   color: #000;
   font-weight: 700;
-  font-size: 13px;
-  padding: 0 16px;
+  font-size: 12px;
+  padding: 0 14px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  white-space: nowrap;
 }
 
-/* Modal Vitória */
 .win-trophy {
-  font-size: 56px;
-  text-align: center;
-  margin-bottom: 10px;
-  animation: bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-size: 48px;
+  margin-bottom: 6px;
 }
 
 .win-amount-badge {
   background: rgba(16, 185, 129, 0.15);
   border: 2px solid var(--wager-green);
   border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-  margin: 16px 0;
+  padding: 14px;
+  margin: 14px 0;
 }
 
 .win-payout-text {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 800;
   color: var(--wager-green);
-  font-family: 'Share Tech Mono', monospace;
-  text-shadow: 0 0 15px var(--wager-green-glow);
+  font-family: monospace;
 }
 
-@keyframes bounce {
-  0% { transform: scale(0.3); opacity: 0; }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* Toast */
 .wager-toast {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 20px;
+  right: 20px;
   background: #151a28;
   border: 1px solid var(--wager-border);
   color: #fff;
-  padding: 12px 20px;
+  padding: 12px 18px;
   border-radius: 10px;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-  z-index: 2000;
+  z-index: 2000000;
   display: flex;
   align-items: center;
   gap: 10px;
-  animation: toast-enter 0.3s ease;
 }
 
-@keyframes toast-enter {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* Mobile responsive */
 @media (max-width: 600px) {
-  #lobby-topbar {
-    padding: 10px 14px;
-  }
-  .topbar-title {
-    display: none;
-  }
-  .balance-card {
-    padding: 4px 10px;
-  }
-  .balance-val {
-    font-size: 15px;
-  }
-  .btn-top {
-    padding: 6px 10px;
-    font-size: 11px;
-  }
-  .btn-cashout {
-    padding: 12px 24px;
-    font-size: 18px;
-  }
-  #btn-cashout-container {
-    bottom: 90px;
-  }
+  #lobby-topbar { padding: 10px 12px; }
+  .topbar-title { display: none; }
+  .balance-card { padding: 4px 8px; }
+  .balance-val { font-size: 14px; }
+  .btn-top { padding: 6px 10px; font-size: 11px; }
+  .btn-cashout { padding: 14px 26px; font-size: 18px; }
+  #btn-cashout-container { bottom: 65px; }
+  .cashout-shortcut { display: none; }
 }

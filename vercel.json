@@ -1,7 +1,12 @@
 {
   "version": 2,
   "regions": ["gru1"],
+  "cleanUrls": true,
   "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
     {
       "source": "/api/:path*",
       "destination": "/api/index.js"
