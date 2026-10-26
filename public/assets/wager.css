@@ -1371,4 +1371,12 @@
     padding: 12px 14px;
     font-size: 14px;
   }
+
+  .menu-footer, .footer-info, .menu-language, .footer-note {
+    display: none !important;
+  }
+}
+
+.menu-footer, .footer-info, .menu-language, .footer-note {
+  display: none !important;
 }

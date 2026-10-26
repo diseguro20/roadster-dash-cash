@@ -95,9 +95,8 @@
       width: 100%;
       margin: auto 0;
     }
-    .menu-footer {
-      margin-top: auto;
-      width: 100%;
+    .menu-footer, .footer-info, .menu-language, .footer-note {
+      display: none !important;
     }
     .go-buttons {
       display: grid;
@@ -113,6 +112,92 @@
     }
     #menu-rankings, #ranking, #google-account, #rank-btn, .roadster-buy, .go-rank, .go-gap {
       display: none !important;
+    }
+
+    /* Otimização responsiva perfeita para telas mobile e tablets */
+    @media (max-width: 768px) {
+      #menu {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        padding-top: calc(84px + var(--safe-t)) !important;
+        padding-bottom: calc(20px + var(--safe-b)) !important;
+        padding-left: clamp(14px, 4vw, 24px) !important;
+        padding-right: clamp(14px, 4vw, 24px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+      }
+      .menu-left {
+        max-width: 440px !important;
+        width: 100% !important;
+        margin: auto auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+      }
+      .brand {
+        text-align: center;
+        margin-bottom: 2px;
+      }
+      .brand-sub {
+        justify-content: center;
+        min-height: auto !important;
+        font-size: 13px !important;
+        letter-spacing: 3px !important;
+      }
+      .brand h1 {
+        font-size: clamp(32px, 8.5vw, 44px) !important;
+        line-height: 1.05 !important;
+        margin: 0 !important;
+      }
+      .pilot, .best {
+        justify-content: center;
+      }
+      .wager-box {
+        margin: 6px 0 10px 0 !important;
+        padding: 14px 16px !important;
+        background: rgba(12, 14, 22, 0.94) !important;
+        border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
+      }
+      .quick-bet-grid {
+        gap: 6px !important;
+        margin-bottom: 12px !important;
+      }
+      .quick-btn {
+        padding: 9px 4px !important;
+        font-size: 13.5px !important;
+      }
+      .btn-start-race {
+        padding: 14px 16px !important;
+        font-size: 16px !important;
+        letter-spacing: 0.8px !important;
+      }
+      .wager-rules-hint {
+        font-size: 11px !important;
+        margin-top: 8px !important;
+        line-height: 1.4 !important;
+      }
+      .btn-share-lobby {
+        padding: 11px 14px !important;
+        font-size: 13px !important;
+        margin-bottom: 8px !important;
+      }
+      .menu-row {
+        justify-content: center;
+        gap: 8px !important;
+        width: 100% !important;
+      }
+      .menu-row .ghost {
+        flex: 1 1 auto !important;
+        padding: 9px 12px !important;
+        font-size: 12px !important;
+        letter-spacing: 0.5px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: 8px !important;
+      }
     }
   </style>
 </head>
@@ -285,19 +370,10 @@
           <button id="help-btn" class="ghost" data-i18n="menu.help"></button>
         </div>
       </div>
-      <footer class="menu-footer no-touch">
-        <div class="footer-info">
-          <nav class="footer-links" aria-label="Site information">
-            <div class="footer-tools">
-              <label class="menu-language">
-                <span data-i18n="menu.language">Language</span>
-                <select id="language-select" data-i18n-aria-label="menu.language" aria-label="Language"></select>
-              </label>
-            </div>
-          </nav>
-          <p class="footer-note" data-i18n="footer.independent">Independent fan game. Not affiliated with Tesla, Inc.</p>
-        </div>
-      </footer>
+      <!-- Suporte silencioso a seletores legados do motor original -->
+      <div style="display: none !important;" aria-hidden="true">
+        <select id="language-select"></select>
+      </div>
     </div>
 
     <!-- ── 게임 오버 ───────────────────────── -->
