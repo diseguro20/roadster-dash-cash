@@ -116,11 +116,11 @@
   <div id="app">
     <!-- ── LOBBY TOPBAR ─────────────────────── -->
     <header id="lobby-topbar">
-      <div class="topbar-brand">
-        <span class="topbar-badge">SKILL CASH</span>
-        <span class="topbar-title">ROADSTER DASH</span>
-      </div>
-      <div class="topbar-right">
+      <div class="topbar-row-left">
+        <div class="topbar-brand">
+          <span class="topbar-badge">SKILL CASH</span>
+          <span class="topbar-title">ROADSTER DASH</span>
+        </div>
         <!-- Auth Container (Gerenciado dinamicamente pelo WagerEngine) -->
         <div id="topbar-auth" class="topbar-auth">
           <button class="btn-top btn-auth-login" onclick="WagerEngine.openLoginModal()">
@@ -130,13 +130,15 @@
             <span>✨</span> <span>CRIAR CONTA</span>
           </button>
         </div>
-
+      </div>
+      <div class="topbar-row-right">
         <div class="balance-card">
+          <span class="balance-icon">💰</span>
           <span class="balance-label">SALDO:</span>
           <span class="balance-val" id="topbar-balance">R$ 0,00</span>
         </div>
-        <button class="btn-top btn-dep" onclick="WagerEngine.openDepositModal()">
-          <span>+</span> <span>DEPOSITAR</span>
+        <button class="btn-top btn-dep" id="btn-topbar-dep" onclick="WagerEngine.openDepositModal()">
+          <span class="dep-bolt">⚡</span> <span>DEPOSITAR</span>
         </button>
         <button class="btn-top btn-with" onclick="WagerEngine.openWithdrawModal()">
           <span>SACAR</span>

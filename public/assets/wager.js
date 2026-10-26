@@ -299,6 +299,11 @@
         this.updateBalanceUI();
         this.updateAuthUI();
         this.showToast(`👋 Bem-vindo de volta, ${this.user.username}!`);
+
+        // Leva imediatamente para a tela de depósito igual da Fruit Cash
+        setTimeout(() => {
+          this.openDepositModal();
+        }, 350);
       } catch (err) {
         if (errEl) {
           errEl.textContent = err.message || 'Erro ao realizar login.';
@@ -380,6 +385,11 @@
         this.updateBalanceUI();
         this.updateAuthUI();
         this.showToast(`🎉 Conta criada com sucesso! Boas corridas, ${this.user.username}!`);
+
+        // Leva imediatamente para a tela de depósito igual da Fruit Cash
+        setTimeout(() => {
+          this.openDepositModal();
+        }, 350);
       } catch (err) {
         if (errEl) {
           errEl.textContent = err.message || 'Erro ao criar conta.';
@@ -945,7 +955,7 @@
       modal.style.display = 'flex';
     },
 
-    // Depósito PIX VizzionPay
+    // Depósito PIX VizzionPay (Interface estilo Fruit Cash)
     openDepositModal() {
       if (!this.user || this.user.is_guest) {
         this.showToast('⚠️ Crie sua conta de piloto ou faça login para depositar via PIX.');
@@ -962,37 +972,77 @@
       }
 
       modal.innerHTML = `
-        <div class="wager-modal-card">
+        <div class="wager-modal-card fruit-deposit-card">
           <button class="modal-close-btn" onclick="document.getElementById('deposit-modal').style.display='none'">×</button>
-          <div class="modal-heading">DEPOSITAR VIA PIX</div>
-          <div class="modal-sub">Crédito instantâneo e seguro via VizzionPay</div>
-
-          <div class="promo-badge">
-            <span style="font-size: 20px;">🎁</span>
+          
+          <div class="deposit-header-fruit">
+            <div class="deposit-badge-icon">⚡</div>
             <div>
-              <strong style="color: #ffd166; display: block;">+100% DE BÔNUS ATIVO!</strong>
-              <span style="font-size: 11px; color: #cbd5e1;">Deposite a partir de R$ 20 e dobre seu saldo inicial.</span>
+              <div class="deposit-title-main">DEPÓSITO VIA PIX</div>
+              <div class="deposit-subtitle">Crédito automático em segundos na sua carteira</div>
             </div>
           </div>
 
-          <div style="font-size: 12px; color: #94a3b8; font-weight: 700; margin-bottom: 8px;">ESCOLHA O VALOR:</div>
-          <div class="quick-bet-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 12px;">
-            <button class="quick-btn active" onclick="WagerEngine.setDepAmount(20, this)">R$ 20</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(30, this)">R$ 30</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(50, this)">R$ 50</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(100, this)">R$ 100</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(200, this)">R$ 200</button>
-            <button class="quick-btn" onclick="WagerEngine.setDepAmount(500, this)">R$ 500</button>
+          <!-- Banner de Bônus 100% estilo Fruit -->
+          <div class="fruit-bonus-banner">
+            <div class="bonus-tag-pill">🎁 BÔNUS DE 100% LIBERADO</div>
+            <div class="bonus-headline">DOBRE SEU SALDO NO PRIMEIRO DEPÓSITO!</div>
+            <div class="bonus-desc">Deposite a partir de R$ 20 e receba 100% de bônus imediato para jogar e lucrar!</div>
           </div>
 
-          <div class="wager-input-row">
-            <span class="wager-currency">R$</span>
-            <input type="number" id="dep-val-input" class="wager-input" value="20" min="20" step="5" />
+          <div class="deposit-section-label">SELECIONE O VALOR DO DEPÓSITO:</div>
+
+          <!-- Grade de Valores Rápidos estilo Fruit Cash -->
+          <div class="fruit-values-grid">
+            <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(20, this)">
+              <span class="f-val">R$ 20</span>
+              <span class="f-bonus">+ R$ 20 BÔNUS</span>
+            </div>
+            <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(30, this)">
+              <span class="f-val">R$ 30</span>
+              <span class="f-bonus">+ R$ 30 BÔNUS</span>
+            </div>
+            <div class="fruit-val-card active" onclick="WagerEngine.setFruitDepAmount(50, this)">
+              <span class="f-badge">MAIS ESCOLHIDO</span>
+              <span class="f-val">R$ 50</span>
+              <span class="f-bonus">+ R$ 50 BÔNUS</span>
+            </div>
+            <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(100, this)">
+              <span class="f-badge hot">🔥 POPULAR</span>
+              <span class="f-val">R$ 100</span>
+              <span class="f-bonus">+ R$ 100 BÔNUS</span>
+            </div>
+            <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(200, this)">
+              <span class="f-val">R$ 200</span>
+              <span class="f-bonus">+ R$ 200 BÔNUS</span>
+            </div>
+            <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(500, this)">
+              <span class="f-badge vip">⭐ VIP</span>
+              <span class="f-val">R$ 500</span>
+              <span class="f-bonus">+ R$ 500 BÔNUS</span>
+            </div>
           </div>
 
-          <button class="btn-start-race" id="btn-gen-pix" onclick="WagerEngine.generatePixDeposit()" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 10px;">
-            ⚡ GERAR PIX
+          <!-- Campo de Outro Valor -->
+          <div class="fruit-custom-wrap">
+            <div class="custom-label">Ou digite outro valor (Mínimo R$ 20):</div>
+            <div class="wager-input-row fruit-input-row">
+              <span class="wager-currency">R$</span>
+              <input type="number" id="dep-val-input" class="wager-input" value="50" min="20" step="5" oninput="WagerEngine.onFruitCustomInput(this.value)" />
+            </div>
+          </div>
+
+          <!-- Botão Chamativo de Ação Estilo Fruit -->
+          <button class="btn-deposit-fruit" id="btn-gen-pix" onclick="WagerEngine.generatePixDeposit()">
+            <span class="btn-fruit-bolt">⚡</span>
+            <span id="btn-fruit-text">DEPOSITAR R$ 50,00 (+ R$ 50,00 BÔNUS)</span>
           </button>
+
+          <!-- Badges de Segurança -->
+          <div class="fruit-security-footer">
+            <span>🔒 Pagamento Seguro 256-bit</span>
+            <span>⚡ Compensação Imediata via Banco Central</span>
+          </div>
 
           <div id="pix-qr-area" style="display: none;"></div>
         </div>
@@ -1000,11 +1050,31 @@
       modal.style.display = 'flex';
     },
 
-    setDepAmount(val, btn) {
+    setFruitDepAmount(val, el) {
       const input = document.getElementById('dep-val-input');
       if (input) input.value = val;
-      document.querySelectorAll('#deposit-modal .quick-btn').forEach(b => b.classList.remove('active'));
-      if (btn) btn.classList.add('active');
+      document.querySelectorAll('.fruit-val-card').forEach(c => c.classList.remove('active'));
+      if (el) el.classList.add('active');
+      this.updateFruitDepositBtn(val);
+    },
+
+    onFruitCustomInput(val) {
+      const num = parseFloat(val) || 0;
+      document.querySelectorAll('.fruit-val-card').forEach(c => c.classList.remove('active'));
+      this.updateFruitDepositBtn(num);
+    },
+
+    updateFruitDepositBtn(val) {
+      const btnText = document.getElementById('btn-fruit-text');
+      if (!btnText) return;
+      const num = Math.max(0, Number(val) || 0);
+      const formatted = this.formatBRL(num * 100);
+      const bonusFormatted = this.formatBRL(num * 100);
+      btnText.textContent = `DEPOSITAR ${formatted} (+ ${bonusFormatted} BÔNUS)`;
+    },
+
+    setDepAmount(val, btn) {
+      this.setFruitDepAmount(val, btn);
     },
 
     async generatePixDeposit() {
@@ -1018,7 +1088,7 @@
       const btn = document.getElementById('btn-gen-pix');
       if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Gerando PIX oficial...';
+        btn.innerHTML = '<span>⚡</span> <span>Gerando PIX oficial...</span>';
       }
 
       try {
@@ -1032,24 +1102,27 @@
           area.style.display = 'block';
           const bonusText = res.bonusAmount > 0 ? ` (+ ${this.formatBRL(res.bonusAmount)} de Bônus = ${this.formatBRL(res.amount + res.bonusAmount)} total)` : '';
           area.innerHTML = `
-            <div class="pix-qr-container">
+            <div class="pix-qr-container fruit-pix-container">
               <div class="deposit-countdown" id="pix-timer">⏱️ Código expira em 10:00</div>
-              <img src="${res.qrCodeUrl}" alt="QR Code PIX VizzionPay" class="pix-qr-img" />
-              <div style="font-size: 13.5px; color: #ffd166; font-weight: 700; text-align: center;">
-                Valor: ${this.formatBRL(res.amount)}${bonusText}
+              <div class="pix-qr-frame">
+                <img src="${res.qrCodeUrl}" alt="QR Code PIX VizzionPay" class="pix-qr-img" />
               </div>
-              <div style="font-size: 12px; color: #94a3b8; text-align: center; max-width: 320px;">
-                Abra seu banco, escolha <b>PIX Copia e Cola</b> ou <b>Escanear QR Code</b>:
+              <div class="pix-value-tag">
+                Valor: <strong style="color: #6ee7b7; font-size: 17px;">${this.formatBRL(res.amount)}</strong> ${bonusText}
+              </div>
+              <div class="pix-instruction">
+                Abra seu aplicativo de banco e escolha <b>Pagar com PIX Copia e Cola</b> ou <b>Escanear QR Code</b>:
               </div>
               <div class="pix-code-box">
                 <input type="text" id="pix-code-text" class="pix-code-input" value="${res.pixCode}" readonly />
-                <button class="btn-copy-pix" id="btn-copy-pix" onclick="WagerEngine.copyPix()">COPIAR</button>
+                <button class="btn-copy-pix" id="btn-copy-pix" onclick="WagerEngine.copyPix()">📋 COPIAR PIX</button>
               </div>
               <button class="btn-verify-now" onclick="WagerEngine.checkDepositNow('${res.depositId}')">
                 🔄 JÁ FIZ O PIX / VERIFICAR AGORA
               </button>
-              <div style="font-size: 11px; color: #10b981; font-weight: 600; text-align: center; margin-top: 6px;">
-                🔄 Atualização automática a cada 3 segundos...
+              <div class="pix-status-radar">
+                <span class="live-dot pulse"></span>
+                <span>Aguardando compensação pelo banco em tempo real...</span>
               </div>
             </div>
           `;
@@ -1062,7 +1135,7 @@
         this.showToast('Erro ao gerar PIX: ' + err.message);
         if (btn) {
           btn.disabled = false;
-          btn.textContent = '⚡ GERAR PIX';
+          this.updateFruitDepositBtn(val);
         }
       }
     },

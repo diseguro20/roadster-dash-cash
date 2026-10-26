@@ -23,12 +23,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  background: linear-gradient(180deg, rgba(10, 10, 15, 0.95) 0%, rgba(10, 10, 15, 0.6) 80%, transparent 100%);
+  padding: 10px 18px;
+  background: linear-gradient(180deg, rgba(8, 9, 14, 0.98) 0%, rgba(8, 9, 14, 0.75) 80%, transparent 100%);
   z-index: 100;
   box-sizing: border-box;
   font-family: 'Rajdhani', sans-serif;
   pointer-events: auto;
+}
+
+.topbar-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .topbar-brand {
@@ -55,7 +61,7 @@
   letter-spacing: 1px;
 }
 
-.topbar-right {
+.topbar-row-right {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -65,11 +71,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(20, 24, 38, 0.85);
-  border: 1px solid rgba(255, 209, 102, 0.3);
+  background: rgba(20, 24, 38, 0.9);
+  border: 1px solid rgba(255, 209, 102, 0.35);
   padding: 6px 14px;
   border-radius: 8px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.balance-icon {
+  font-size: 14px;
 }
 
 .balance-label {
@@ -97,26 +107,60 @@
   letter-spacing: 1px;
   cursor: pointer;
   border: none;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, filter 0.15s ease;
   text-transform: uppercase;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .btn-top:active {
   transform: scale(0.96);
 }
 
+/* BOTÃO DEPOSITAR SUPER CHAMATIVO */
 .btn-dep {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
   color: #ffffff;
-  box-shadow: 0 0 12px var(--wager-green-glow);
+  border: 1.5px solid rgba(110, 231, 183, 0.9);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  font-weight: 800;
+  letter-spacing: 1px;
+  animation: depositPulse 2.2s infinite ease-in-out;
+}
+
+.btn-dep:hover {
+  filter: brightness(1.18);
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.95);
+}
+
+.dep-bolt {
+  color: #ffd166;
+  font-size: 13.5px;
+  filter: drop-shadow(0 0 4px #ffd166);
+}
+
+@keyframes depositPulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.55);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(16, 185, 129, 0.95);
+    transform: scale(1.03);
+  }
 }
 
 .btn-with {
   background: rgba(30, 35, 50, 0.85);
   color: #e2e8f0;
   border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.btn-with:hover {
+  background: rgba(45, 55, 75, 0.95);
+  border-color: #ffd166;
+  color: #fff;
 }
 
 /* ── Topbar Auth ── */
@@ -820,17 +864,415 @@
   letter-spacing: 0.5px;
 }
 
-@media (max-width: 600px) {
-  #lobby-topbar { padding: 8px 10px; gap: 6px; }
-  .topbar-title { display: none; }
-  .topbar-badge { font-size: 10px; padding: 2px 6px; }
-  .balance-card { padding: 4px 7px; gap: 4px; }
-  .balance-label { display: none; }
-  .balance-val { font-size: 13.5px; }
-  .btn-top { padding: 6px 8px; font-size: 10.5px; gap: 4px; }
-  .btn-cashout { padding: 12px 18px; font-size: 14px; letter-spacing: 0.5px; white-space: normal; text-align: center; max-width: 94vw; }
-  #btn-cashout-container { bottom: 65px; }
-  .cashout-shortcut { display: none; }
-  .user-name { max-width: 70px; font-size: 12px; }
-  .auth-card { padding: 22px 18px; }
+/* ── Fruit Cash Style Deposit Modal ── */
+.fruit-deposit-card {
+  max-width: 440px !important;
+  background: linear-gradient(180deg, #131724 0%, #0c0f18 100%) !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(16, 185, 129, 0.18) !important;
+  padding: 22px 18px !important;
+  border-radius: 20px !important;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.deposit-header-fruit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.deposit-badge-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+  flex-shrink: 0;
+}
+
+.deposit-title-main {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.deposit-subtitle {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.fruit-bonus-banner {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bonus-tag-pill {
+  display: inline-block;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+
+.bonus-headline {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #ffd166;
+  margin-bottom: 3px;
+  letter-spacing: 0.5px;
+}
+
+.bonus-desc {
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.deposit-section-label {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+
+.fruit-values-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.fruit-val-card {
+  background: rgba(22, 28, 44, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.fruit-val-card:hover {
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(28, 36, 56, 0.95);
+  transform: translateY(-2px);
+}
+
+.fruit-val-card.active {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.18);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.45);
+}
+
+.fruit-val-card .f-val {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.fruit-val-card.active .f-val {
+  color: #6ee7b7;
+}
+
+.fruit-val-card .f-bonus {
+  font-size: 9px;
+  color: #ffd166;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.fruit-val-card .f-badge {
+  position: absolute;
+  top: -7px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-size: 7.5px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 8px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.fruit-val-card .f-badge.hot {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.fruit-val-card .f-badge.vip {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000;
+}
+
+.fruit-custom-wrap {
+  margin-bottom: 12px;
+}
+
+.custom-label {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.fruit-input-row {
+  background: rgba(15, 20, 32, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+
+.btn-deposit-fruit {
+  background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
+  color: #ffffff;
+  border: 2px solid rgba(110, 231, 183, 0.9);
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.65);
+  transition: transform 0.15s, box-shadow 0.15s;
+  animation: depositPulse 2.2s infinite ease-in-out;
+}
+
+.btn-deposit-fruit:active {
+  transform: scale(0.97);
+}
+
+.btn-fruit-bolt {
+  color: #ffd166;
+  font-size: 16px;
+  filter: drop-shadow(0 0 4px #ffd166);
+}
+
+.fruit-security-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.fruit-pix-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.pix-qr-frame {
+  background: #ffffff;
+  padding: 8px;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.pix-value-tag {
+  font-size: 13.5px;
+  color: #ffd166;
+  font-weight: 700;
+  text-align: center;
+}
+
+.pix-instruction {
+  font-size: 11.5px;
+  color: #94a3b8;
+  text-align: center;
+  max-width: 320px;
+  line-height: 1.4;
+}
+
+.pix-status-radar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #6ee7b7;
+  font-weight: 600;
+  margin-top: 8px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  #lobby-topbar {
+    padding: 7px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: linear-gradient(180deg, rgba(7, 8, 12, 0.98) 0%, rgba(7, 8, 12, 0.92) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .topbar-row-left {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .topbar-brand {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .topbar-title {
+    display: none;
+  }
+
+  .topbar-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    letter-spacing: 0.8px;
+  }
+
+  .topbar-auth {
+    margin-left: auto;
+    gap: 5px;
+  }
+
+  .user-pill {
+    padding: 2px 7px;
+    gap: 5px;
+    max-width: 150px;
+  }
+
+  .user-name {
+    max-width: 75px;
+    font-size: 11px;
+  }
+
+  .btn-logout {
+    padding: 2px 5px;
+    font-size: 9.5px;
+  }
+
+  .topbar-row-right {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .balance-card {
+    flex: 1 1 auto;
+    padding: 5px 8px;
+    gap: 4px;
+    justify-content: center;
+    background: rgba(18, 24, 38, 0.9);
+    border: 1px solid rgba(255, 209, 102, 0.4);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .balance-label {
+    display: none;
+  }
+
+  .balance-icon {
+    font-size: 13px;
+  }
+
+  .balance-val {
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  /* BOTÃO DEPOSITAR SUPER CHAMATIVO NO MOBILE */
+  .btn-dep {
+    flex: 1.5 1 auto;
+    padding: 7px 11px;
+    font-size: 12.5px;
+    font-weight: 800;
+    justify-content: center;
+    letter-spacing: 0.6px;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.85);
+  }
+
+  .btn-with {
+    flex: 0.7 1 auto;
+    padding: 7px 7px;
+    font-size: 11px;
+    justify-content: center;
+  }
+
+  .menu-mute {
+    top: 88px !important;
+    right: 12px !important;
+    z-index: 50 !important;
+  }
+
+  .btn-cashout {
+    padding: 12px 18px;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    white-space: normal;
+    text-align: center;
+    max-width: 94vw;
+  }
+
+  #btn-cashout-container {
+    bottom: 65px;
+  }
+
+  .cashout-shortcut {
+    display: none;
+  }
+
+  .auth-card {
+    padding: 22px 18px;
+  }
+
+  .fruit-deposit-card {
+    padding: 18px 14px !important;
+  }
+
+  .fruit-values-grid {
+    gap: 6px;
+  }
+
+  .fruit-val-card .f-val {
+    font-size: 15px;
+  }
+
+  .btn-deposit-fruit {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
 }
