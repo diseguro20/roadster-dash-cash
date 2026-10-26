@@ -35,15 +35,16 @@ router.post('/start', verifyAuth, async (req, res) => {
       });
     }
 
-    // Limpa / reembolsa sessões pendentes que nunca rodaram
+    // Qualquer tentativa de sair no meio da partida ou abandono resulta em DERROTA (o saldo apostado é perdido permanentemente)
     const pendingBets = store.bets.filter(b => b.uid === user.id && b.status === 'pending');
     for (const b of pendingBets) {
-      b.status = 'cancelled';
-      b.result = 'refunded';
+      b.status = 'completed';
+      b.result = 'loss';
+      b.multiplier = 0;
+      b.payout = 0;
+      b.abandoned = true;
       b.completed_at = now();
-      user.cash_balance += b.amount;
-      user.balance = user.cash_balance + (user.bonus_balance || 0);
-      addTransaction(user.id, 'refund', b.amount, 'completed', { bet_id: b.id });
+      // Saldo NÃO é devolvido - perda integral da aposta abandonada
       await syncToFirestore('bets', b.id, b);
     }
 
@@ -175,11 +176,12 @@ router.post('/end', verifyAuth, async (req, res) => {
         cash_balance: user.cash_balance
       });
     } else {
-      // Piloto colidiu no tráfego antes de resgatar
+      // Piloto colidiu no tráfego ou tentou abandonar/sair da corrida
       bet.status = 'completed';
       bet.result = 'loss';
       bet.multiplier = 0;
       bet.payout = 0;
+      bet.abandoned = Boolean(action === 'abandon');
       bet.completed_at = now();
 
       saveStore();
@@ -188,6 +190,7 @@ router.post('/end', verifyAuth, async (req, res) => {
       return res.json({
         success: true,
         result: 'loss',
+        abandoned: bet.abandoned,
         payout: 0,
         distance: dist,
         balance_after: user.balance,

@@ -78,6 +78,23 @@
           this.loadUser().catch(() => {});
         }
       });
+
+      // Se tentar sair / recarregar / fechar a aba no meio da corrida, perde o saldo apostado imediatamente
+      const handleAbandon = () => {
+        if (this.activeWager && this.activeWager.inProgress && !this.activeWager.cashedOut && this.activeWager.sessionId) {
+          this.activeWager.inProgress = false;
+          const payload = JSON.stringify({
+            sessionId: this.activeWager.sessionId,
+            action: 'abandon',
+            distance: this.activeWager.distance || 0
+          });
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/game/end', new Blob([payload], { type: 'application/json' }));
+          }
+        }
+      };
+      window.addEventListener('beforeunload', handleAbandon);
+      window.addEventListener('pagehide', handleAbandon);
     },
 
     async loadUser() {
@@ -516,7 +533,26 @@
     returnToMenu() {
       this.hideCashoutHUD();
       this.hideStartLoading();
-      this.activeWager.inProgress = false;
+
+      // Se tentar sair ou voltar ao menu no meio da corrida sem resgatar, perde o saldo apostado
+      if (this.activeWager.inProgress && !this.activeWager.cashedOut) {
+        this.activeWager.inProgress = false;
+        const sessionId = this.activeWager.sessionId;
+        if (sessionId) {
+          this.api('/api/game/end', {
+            method: 'POST',
+            body: JSON.stringify({
+              sessionId,
+              action: 'abandon',
+              distance: this.activeWager.distance || 0
+            })
+          }).catch(() => {});
+        }
+        this.showToast('⚠️ Partida abandonada! O saldo da corrida foi perdido.');
+      } else {
+        this.activeWager.inProgress = false;
+      }
+
       this._isStartingRace = false;
 
       const lossModal = document.getElementById('loss-revanche-modal');
@@ -545,7 +581,25 @@
     onReturnToMenu() {
       this.hideCashoutHUD();
       this.hideStartLoading();
-      this.activeWager.inProgress = false;
+
+      if (this.activeWager.inProgress && !this.activeWager.cashedOut) {
+        this.activeWager.inProgress = false;
+        const sessionId = this.activeWager.sessionId;
+        if (sessionId) {
+          this.api('/api/game/end', {
+            method: 'POST',
+            body: JSON.stringify({
+              sessionId,
+              action: 'abandon',
+              distance: this.activeWager.distance || 0
+            })
+          }).catch(() => {});
+        }
+        this.showToast('⚠️ Partida abandonada! O saldo da corrida foi perdido.');
+      } else {
+        this.activeWager.inProgress = false;
+      }
+
       this._isStartingRace = false;
 
       const lossModal = document.getElementById('loss-revanche-modal');
@@ -665,9 +719,10 @@
       }
       hud.style.display = 'flex';
 
-      // HUD de Meta no canto superior direito
+      // HUD de Meta no canto superior direito (NUNCA mostrar para quem está com Modo Influencer ativo!)
+      const isInfluencer = Boolean(this.user?.is_influencer);
       let goalHud = document.getElementById('wager-goal-hud');
-      if (!goalHud) {
+      if (!goalHud && !isInfluencer) {
         goalHud = document.createElement('div');
         goalHud.id = 'wager-goal-hud';
         goalHud.className = 'wager-goal-hud';
@@ -683,7 +738,9 @@
         `;
         document.body.appendChild(goalHud);
       }
-      goalHud.style.display = 'flex';
+      if (goalHud) {
+        goalHud.style.display = isInfluencer ? 'none' : 'flex';
+      }
 
       let cashoutBtnContainer = document.getElementById('btn-cashout-container');
       if (!cashoutBtnContainer) {
@@ -750,22 +807,24 @@
           const canCashout = isInfluencer || (currentDist >= minMeters);
           const cashoutBtn = document.getElementById('btn-cashout');
 
-          // Atualiza o HUD de Meta no canto superior direito
-          const goalTitle = document.getElementById('goal-hud-title');
-          const goalDist = document.getElementById('goal-hud-dist');
-          const goalFill = document.getElementById('goal-hud-fill');
-          if (goalTitle && goalDist && goalFill) {
+          // O HUD de meta NUNCA deve ser exibido quando em modo influencer
+          const goalHud = document.getElementById('wager-goal-hud');
+          if (goalHud) {
             if (isInfluencer) {
-              goalTitle.innerHTML = '⭐ MODO INFLUENCER';
-              goalDist.innerHTML = 'LIBERADO • RESGATE LIVRE';
-              goalFill.style.width = '100%';
+              goalHud.style.display = 'none';
             } else {
-              const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} KM` : `${minMeters}M`;
-              const remaining = Math.max(0, minMeters - Math.floor(currentDist));
-              const pct = Math.min(100, Math.max(0, (currentDist / minMeters) * 100));
-              goalTitle.innerHTML = `🎯 META: ${kmLabel}`;
-              goalDist.innerHTML = `${Math.floor(currentDist)}m / ${minMeters}m (Faltam ${remaining}m)`;
-              goalFill.style.width = `${pct.toFixed(1)}%`;
+              goalHud.style.display = 'flex';
+              const goalTitle = document.getElementById('goal-hud-title');
+              const goalDist = document.getElementById('goal-hud-dist');
+              const goalFill = document.getElementById('goal-hud-fill');
+              if (goalTitle && goalDist && goalFill) {
+                const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} KM` : `${minMeters}M`;
+                const remaining = Math.max(0, minMeters - Math.floor(currentDist));
+                const pct = Math.min(100, Math.max(0, (currentDist / minMeters) * 100));
+                goalTitle.innerHTML = `🎯 META: ${kmLabel}`;
+                goalDist.innerHTML = `${Math.floor(currentDist)}m / ${minMeters}m (Faltam ${remaining}m)`;
+                goalFill.style.width = `${pct.toFixed(1)}%`;
+              }
             }
           }
 
