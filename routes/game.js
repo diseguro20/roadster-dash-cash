@@ -126,6 +126,13 @@ router.post('/end', verifyAuth, async (req, res) => {
     bet.distance = dist;
 
     if (action === 'cashout') {
+      const isInfluencer = Boolean(user.is_influencer);
+      if (!isInfluencer && dist < 10000) {
+        return res.status(400).json({
+          error: 'Resgate bloqueado! Para jogadores normais, a meta de 10 km (10.000 metros) deve ser percorrida antes de resgatar.'
+        });
+      }
+
       // Piloto fez o resgate antes de colidir no tráfego!
       const mult = Math.max(1.0, Math.min(Number(reqMultiplier || 1.0), 100.0));
       const payout = Math.floor(bet.amount * mult);

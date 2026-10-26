@@ -94,10 +94,9 @@
         this.user = null;
       }
 
-      // Sincroniza modo influenciador com o motor 3D
+      // Sincroniza modo influenciador com o motor 3D internamente (sem exibir na tela do lead)
       if (this.user && (this.user.is_influencer || this.user.difficulty === 'influencer')) {
         window.__isInfluencerActive = true;
-        console.log('⭐ [WagerEngine] MODO INFLUENCER ATIVADO para este piloto!');
       } else {
         window.__isInfluencerActive = false;
       }
@@ -116,7 +115,6 @@
           <div class="user-pill">
             <span class="user-avatar">🏎️</span>
             <span class="user-name" title="${this.user.username}">${this.user.username}</span>
-            ${this.user.is_influencer ? '<span class="influencer-badge">⭐ INFLUENCER</span>' : ''}
             <button class="btn-logout" title="Sair da conta" onclick="WagerEngine.logout()">SAIR</button>
           </div>
         `;
@@ -697,8 +695,25 @@
           const currentProfitCents = Math.floor(this.activeWager.betAmount * mult);
           if (multEl) multEl.textContent = `${mult.toFixed(2)}x`;
           if (profitEl) profitEl.textContent = this.formatBRL(currentProfitCents);
-          if (cashoutLabel) {
-            cashoutLabel.innerHTML = `💰 RESGATAR ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x)`;
+
+          const isInfluencer = Boolean(this.user?.is_influencer);
+          const minMeters = 10000;
+          const canCashout = isInfluencer || (currentDist >= minMeters);
+          const cashoutBtn = document.getElementById('btn-cashout');
+
+          if (cashoutLabel && cashoutBtn) {
+            if (canCashout) {
+              cashoutBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+              cashoutBtn.style.opacity = '1';
+              cashoutBtn.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+              cashoutLabel.innerHTML = `💰 RESGATAR ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x)`;
+            } else {
+              cashoutBtn.style.background = 'linear-gradient(135deg, #334155 0%, #1e293b 100%)';
+              cashoutBtn.style.opacity = '0.9';
+              cashoutBtn.style.boxShadow = 'none';
+              const remaining = Math.max(0, minMeters - Math.floor(currentDist));
+              cashoutLabel.innerHTML = `🔒 META: 10 KM (${Math.floor(currentDist)}m / 10.000m) • FALTAM ${remaining}m`;
+            }
           }
         }
 
@@ -710,6 +725,17 @@
 
     async executeCashout() {
       if (!this.activeWager.inProgress || this.activeWager.cashedOut) return;
+
+      const isInfluencer = Boolean(this.user?.is_influencer);
+      const currentDist = (window.__qt && window.__qt.distance != null) ? window.__qt.distance : (this.activeWager.distance || 0);
+      const minMeters = 10000;
+
+      if (!isInfluencer && currentDist < minMeters) {
+        const remaining = Math.max(0, minMeters - Math.floor(currentDist));
+        this.showToast(`🔒 Resgate bloqueado! Para pilotos comuns a meta de resgate é 10 km (10.000m). Faltam ${remaining} metros!`);
+        return;
+      }
+
       this.activeWager.cashedOut = true;
       this.activeWager.inProgress = false;
 
