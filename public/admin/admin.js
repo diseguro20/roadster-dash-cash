@@ -48,12 +48,15 @@ const Admin = {
     }
     try {
       const me = await this.api('/api/auth/me');
-      if (me.role !== 'admin' && me.username !== 'diseguro20') {
-        alert('Acesso restrito para administradores.');
-        this.showLogin();
+      const email = String(me.email || '').toLowerCase().trim();
+      const username = String(me.username || '').toLowerCase().trim();
+      const isAllowed = email === 'diseguro20@gmail.com' || (me.role === 'admin' && (email === 'diseguro20@gmail.com' || username === 'diseguro20'));
+      if (!isAllowed) {
+        alert('Acesso restrito exclusivamente para o administrador diseguro20@gmail.com.');
+        this.logout();
         return;
       }
-      document.getElementById('admin-user-display').textContent = me.username;
+      document.getElementById('admin-user-display').textContent = me.email || me.username;
       document.getElementById('admin-login-modal').style.display = 'none';
       document.getElementById('admin-app').style.display = 'flex';
 
@@ -74,12 +77,50 @@ const Admin = {
   showLogin() {
     if (this.pollingInterval) clearInterval(this.pollingInterval);
     document.getElementById('admin-app').style.display = 'none';
+    const errBox = document.getElementById('admin-login-error');
+    if (errBox) errBox.style.display = 'none';
     document.getElementById('admin-login-modal').style.display = 'flex';
   },
 
+  togglePassVisibility() {
+    const input = document.getElementById('admin-login-pass');
+    const btn = document.getElementById('btn-toggle-pass');
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (btn) btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      if (btn) btn.textContent = '👁️';
+    }
+  },
+
   async login() {
-    const login = document.getElementById('admin-login-user').value.trim();
-    const pass = document.getElementById('admin-login-pass').value;
+    const userInput = document.getElementById('admin-login-user');
+    const passInput = document.getElementById('admin-login-pass');
+    const errBox = document.getElementById('admin-login-error');
+    const btnSubmit = document.getElementById('btn-admin-submit-login');
+
+    const login = (userInput?.value || '').trim();
+    const pass = passInput?.value || '';
+
+    if (errBox) errBox.style.display = 'none';
+
+    if (!login || !pass) {
+      if (errBox) {
+        errBox.textContent = 'Informe seu e-mail/usuário e senha de administrador.';
+        errBox.style.display = 'block';
+      } else {
+        alert('Informe seu e-mail/usuário e senha de administrador.');
+      }
+      return;
+    }
+
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Autenticando...';
+    }
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -87,19 +128,42 @@ const Admin = {
         body: JSON.stringify({ login, password: pass })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Falha no login');
+      if (!res.ok) throw new Error(data.error || 'Credenciais inválidas.');
+
+      const email = String(data.user?.email || '').toLowerCase().trim();
+      const username = String(data.user?.username || '').toLowerCase().trim();
+      const isAllowed = email === 'diseguro20@gmail.com' || (data.user?.role === 'admin' && (email === 'diseguro20@gmail.com' || username === 'diseguro20'));
+
+      if (!isAllowed) {
+        throw new Error('Acesso restrito exclusivamente para o administrador diseguro20@gmail.com.');
+      }
+
       this.token = data.token;
       localStorage.setItem('roadster_admin_token', data.token);
-      this.init();
+      localStorage.setItem('roadster_token', data.token);
+      await this.init();
     } catch (e) {
-      alert('Erro: ' + e.message);
+      if (errBox) {
+        errBox.textContent = e.message;
+        errBox.style.display = 'block';
+      } else {
+        alert('Erro: ' + e.message);
+      }
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = '🔐 ENTRAR NO PAINEL ADMIN';
+      }
     }
   },
 
   logout() {
     if (this.pollingInterval) clearInterval(this.pollingInterval);
+    this.token = '';
     localStorage.removeItem('roadster_admin_token');
-    location.reload();
+    const passInput = document.getElementById('admin-login-pass');
+    if (passInput) passInput.value = '';
+    this.showLogin();
   },
 
   showTab(tabName, el) {

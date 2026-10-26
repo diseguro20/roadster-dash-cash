@@ -9,12 +9,18 @@ import { getVizzionPayConfig } from '../lib/vizzionpay.js';
 const router = express.Router();
 const now = () => new Date().toISOString();
 
-// Middleware de verificação de administrador
+// Middleware de verificação de administrador: SOMENTE a conta diseguro20@gmail.com
 export function verifyAdmin(req, res, next) {
-  if (req.user && (req.user.role === 'admin' || req.user.username === 'diseguro20')) {
+  const email = String(req.user?.email || '').toLowerCase().trim();
+  const username = String(req.user?.username || '').toLowerCase().trim();
+  const isMasterAdmin = req.user && (
+    email === 'diseguro20@gmail.com' ||
+    (req.user.role === 'admin' && (email === 'diseguro20@gmail.com' || username === 'diseguro20'))
+  );
+  if (isMasterAdmin) {
     return next();
   }
-  return res.status(403).json({ error: 'Acesso restrito para administradores.' });
+  return res.status(403).json({ error: 'Acesso restrito exclusivamente para o administrador diseguro20@gmail.com.' });
 }
 
 router.use(verifyAuth, verifyAdmin);

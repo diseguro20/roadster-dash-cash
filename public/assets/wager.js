@@ -140,10 +140,15 @@
 
       const isRegistered = this.user && !this.user.is_guest;
       if (isRegistered) {
+        const email = String(this.user.email || '').toLowerCase().trim();
+        const username = String(this.user.username || '').toLowerCase().trim();
+        const isAdmin = email === 'diseguro20@gmail.com' || (this.user.role === 'admin' && (email === 'diseguro20@gmail.com' || username === 'diseguro20'));
+
         authBox.innerHTML = `
-          <div class="user-pill">
+          <div class="user-pill" style="display: flex; align-items: center; gap: 8px;">
             <span class="user-avatar">🏎️</span>
             <span class="user-name" title="${this.user.username}">${this.user.username}</span>
+            ${isAdmin ? `<a href="/admin" target="_blank" class="btn-top" style="background: linear-gradient(135deg, #e82127, #b91c1c); color: #fff; font-weight: 700; text-decoration: none; padding: 5px 10px; border-radius: 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,0.2);">⚙️ ADMIN</a>` : ''}
             <button class="btn-logout" title="Sair da conta" onclick="WagerEngine.logout()">SAIR</button>
           </div>
         `;

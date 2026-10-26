@@ -1,7 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
-import { store, saveStore, syncToFirestore, getUserFresh, loadSettingsFromFirestore } from '../lib/database.js';
+import { store, saveStore, syncToFirestore, getUserFresh, findUserByLogin, loadSettingsFromFirestore } from '../lib/database.js';
+import { db, firebaseInitialized } from '../lib/firebase.js';
 import { generateToken, verifyAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -47,21 +48,17 @@ router.post('/login', async (req, res) => {
     }
 
     const clean = String(login).trim().toLowerCase();
-    const cleanDigits = clean.replace(/\D/g, '');
 
     let user;
     if (clean.includes('@')) {
       // Regra estrita: Somente a conta de administrador pode efetuar login com e-mail
       if (clean === 'diseguro20@gmail.com') {
-        user = store.users.find(u => u.email && u.email.toLowerCase() === 'diseguro20@gmail.com');
+        user = await findUserByLogin(clean);
       } else {
-        return res.status(401).json({ error: 'Login com e-mail exclusivo do administrador. Jogadores entram com celular ou piloto.' });
+        return res.status(401).json({ error: 'Login com e-mail exclusivo do administrador diseguro20@gmail.com. Jogadores entram com celular ou piloto.' });
       }
     } else {
-      user = store.users.find(u =>
-        (u.username && u.username.toLowerCase() === clean) ||
-        (cleanDigits.length >= 10 && u.phone && u.phone.replace(/\D/g, '') === cleanDigits)
-      );
+      user = await findUserByLogin(login);
     }
 
     if (!user || !user.password_hash) {
@@ -123,13 +120,27 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
     }
 
-    // Unicidade de nome de piloto
-    if (store.users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase())) {
+    // Unicidade de nome de piloto (memória + Firestore)
+    let userExists = store.users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase());
+    if (!userExists && firebaseInitialized && db) {
+      try {
+        const qSnap = await db.collection('users').where('username', '==', cleanUsername).limit(1).get();
+        if (!qSnap.empty) userExists = true;
+      } catch (_) {}
+    }
+    if (userExists) {
       return res.status(400).json({ error: 'Este nome de piloto já está em uso.' });
     }
 
-    // Unicidade de número de celular
-    if (store.users.some(u => u.phone && u.phone.replace(/\D/g, '') === cleanPhone)) {
+    // Unicidade de número de celular (memória + Firestore)
+    let phoneExists = store.users.some(u => u.phone && u.phone.replace(/\D/g, '') === cleanPhone);
+    if (!phoneExists && firebaseInitialized && db) {
+      try {
+        const pSnap = await db.collection('users').where('phone', '==', cleanPhone).limit(1).get();
+        if (!pSnap.empty) phoneExists = true;
+      } catch (_) {}
+    }
+    if (phoneExists) {
       return res.status(400).json({ error: 'Este número de celular já está cadastrado em outra conta.' });
     }
 
