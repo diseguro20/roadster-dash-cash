@@ -23,36 +23,36 @@ router.use(verifyAuth, verifyAdmin);
 router.get('/stats', async (req, res) => {
   if (firebaseInitialized && db) {
     try {
-      const [betsSnap, depSnap, withSnap] = await Promise.all([
+      const [betsSnap, depSnap, withSnap, usersSnap] = await Promise.all([
         db.collection('bets').limit(500).get(),
         db.collection('deposits').limit(200).get(),
-        db.collection('withdrawals').limit(200).get()
+        db.collection('withdrawals').limit(200).get(),
+        db.collection('users').get()
       ]);
-      betsSnap.docs.forEach(doc => {
-        const d = { id: doc.id, ...doc.data() };
-        if (!store.bets.some(b => b.id === d.id)) store.bets.push(d);
-      });
-      depSnap.docs.forEach(doc => {
-        const d = { id: doc.id, ...doc.data() };
-        if (!store.deposits.some(dep => dep.id === d.id)) store.deposits.push(d);
-      });
-      withSnap.docs.forEach(doc => {
-        const d = { id: doc.id, ...doc.data() };
-        if (!store.withdrawals.some(w => w.id === d.id)) store.withdrawals.push(d);
-      });
+      store.bets = betsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      store.deposits = depSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      store.withdrawals = withSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      store.users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (_) {}
   }
 
-  const completedBets = store.bets.filter(b => b.status === 'completed');
+  const genuineUsers = store.users.filter(u => u && !u.id.startsWith('pilot_') && !u.is_guest && !String(u.username || '').toLowerCase().startsWith('pilot_'));
+  const genuineUserIds = genuineUsers.map(u => u.id);
+
+  const realBets = store.bets.filter(b => b && genuineUserIds.includes(b.uid));
+  const completedBets = realBets.filter(b => b.status === 'completed');
   const totalBets = completedBets.reduce((sum, b) => sum + (b.amount || 0), 0);
   const totalPayouts = completedBets.reduce((sum, b) => sum + (b.payout || 0), 0);
   const houseProfit = totalBets - totalPayouts;
 
-  const pendingDeposits = store.deposits.filter(d => d.status === 'pending');
-  const approvedDeposits = store.deposits.filter(d => d.status === 'approved');
-  const pendingWithdrawals = store.withdrawals.filter(w => w.status === 'pending');
+  const realDeposits = store.deposits.filter(d => d && genuineUserIds.includes(d.uid));
+  const pendingDeposits = realDeposits.filter(d => d.status === 'pending');
+  const approvedDeposits = realDeposits.filter(d => d.status === 'approved');
+  const totalDepositsVolume = approvedDeposits.reduce((sum, d) => sum + (d.amount || 0), 0);
 
-  const genuineUsers = store.users.filter(u => u && !u.id.startsWith('pilot_') && !u.is_guest);
+  const realWithdrawals = store.withdrawals.filter(w => w && genuineUserIds.includes(w.uid));
+  const pendingWithdrawals = realWithdrawals.filter(w => w.status === 'pending');
+
   const totalWalletBalance = genuineUsers.reduce((sum, u) => sum + (u.balance || 0), 0);
   const vpConfig = getVizzionPayConfig();
 
@@ -68,7 +68,7 @@ router.get('/stats', async (req, res) => {
     houseProfit,
     pendingDeposits: pendingDeposits.length,
     approvedDeposits: approvedDeposits.length,
-    totalDepositsVolume: approvedDeposits.reduce((sum, d) => sum + (d.amount || 0), 0),
+    totalDepositsVolume,
     pendingWithdrawals: pendingWithdrawals.length,
     totalWalletBalance,
     difficulty: store.settings.difficulty || 'hard',
@@ -82,17 +82,7 @@ router.get(['/users', '/players'], async (req, res) => {
   if (firebaseInitialized && db) {
     try {
       const snap = await db.collection('users').get();
-      snap.docs.forEach(doc => {
-        const d = doc.data();
-        // Não adiciona fakes/pilotos convidados legados
-        if (doc.id.startsWith('pilot_') || d.is_guest) return;
-        const existing = store.users.find(u => u.id === doc.id);
-        if (existing) {
-          Object.assign(existing, d);
-        } else {
-          store.users.push({ id: doc.id, ...d });
-        }
-      });
+      store.users = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (_) {}
   }
 
@@ -157,13 +147,13 @@ router.get('/deposits', async (req, res) => {
   if (firebaseInitialized && db) {
     try {
       const snap = await db.collection('deposits').limit(200).get();
-      snap.docs.forEach(doc => {
-        const d = { id: doc.id, ...doc.data() };
-        if (!store.deposits.some(dep => dep.id === d.id)) store.deposits.push(d);
-      });
+      store.deposits = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (_) {}
   }
-  res.json({ deposits: store.deposits.slice(0, 100) });
+  const genuineUsers = store.users.filter(u => u && !u.id.startsWith('pilot_') && !u.is_guest && !String(u.username || '').toLowerCase().startsWith('pilot_'));
+  const genuineUserIds = genuineUsers.map(u => u.id);
+  const realDeposits = store.deposits.filter(d => d && genuineUserIds.includes(d.uid));
+  res.json({ deposits: realDeposits.slice(0, 100) });
 });
 
 router.post('/deposits/:id/approve', async (req, res) => {
@@ -189,13 +179,13 @@ router.get('/withdrawals', async (req, res) => {
   if (firebaseInitialized && db) {
     try {
       const snap = await db.collection('withdrawals').limit(200).get();
-      snap.docs.forEach(doc => {
-        const d = { id: doc.id, ...doc.data() };
-        if (!store.withdrawals.some(w => w.id === d.id)) store.withdrawals.push(d);
-      });
+      store.withdrawals = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (_) {}
   }
-  res.json({ withdrawals: store.withdrawals.slice(0, 100) });
+  const genuineUsers = store.users.filter(u => u && !u.id.startsWith('pilot_') && !u.is_guest && !String(u.username || '').toLowerCase().startsWith('pilot_'));
+  const genuineUserIds = genuineUsers.map(u => u.id);
+  const realWithdrawals = store.withdrawals.filter(w => w && genuineUserIds.includes(w.uid));
+  res.json({ withdrawals: realWithdrawals.slice(0, 100) });
 });
 
 router.post('/withdrawals/:id/approve', async (req, res) => {
