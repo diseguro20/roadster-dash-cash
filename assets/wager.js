@@ -574,7 +574,10 @@
       }
 
       const menuEl = document.getElementById('menu');
-      if (menuEl) menuEl.classList.remove('hidden');
+      if (menuEl) {
+        menuEl.classList.remove('hidden');
+        menuEl.style.removeProperty('display');
+      }
       this.updateBalanceUI();
     },
 
@@ -609,7 +612,10 @@
       const gameOverEl = document.getElementById('gameover');
       if (gameOverEl) gameOverEl.classList.add('hidden');
       const menuEl = document.getElementById('menu');
-      if (menuEl) menuEl.classList.remove('hidden');
+      if (menuEl) {
+        menuEl.classList.remove('hidden');
+        menuEl.style.removeProperty('display');
+      }
     },
 
     async startWagerRace() {
@@ -688,6 +694,13 @@
 
       // Ativa HUD de Cashout
       this.showCashoutHUD();
+
+      // Força ocultação imediata do menu da tela inicial e seu HUD de apostas
+      const menuEl = document.getElementById('menu');
+      if (menuEl) {
+        menuEl.classList.add('hidden');
+        menuEl.style.setProperty('display', 'none', 'important');
+      }
 
       // Dispara o motor 3D
       if (typeof window.__origStartGame === 'function') {
@@ -938,11 +951,29 @@
         this.onGameOver(details);
       };
       window.__onGameStartHook = () => {
+        const menuEl = document.getElementById('menu');
+        if (menuEl) {
+          menuEl.classList.add('hidden');
+          menuEl.style.setProperty('display', 'none', 'important');
+        }
         clearTimeout(this._loadingFailsafe);
         setTimeout(() => {
           this.hideStartLoading();
         }, 300);
       };
+
+      const pauseMenuBtn = document.getElementById('pause-menu-btn');
+      if (pauseMenuBtn) {
+        pauseMenuBtn.addEventListener('click', () => {
+          this.onReturnToMenu();
+        });
+      }
+      const pauseRetryBtn = document.getElementById('pause-retry-btn');
+      if (pauseRetryBtn) {
+        pauseRetryBtn.addEventListener('click', () => {
+          this.returnToMenuOrLoss();
+        });
+      }
     },
 
     // Modal de Derrota / Revanche

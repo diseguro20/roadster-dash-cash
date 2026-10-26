@@ -1375,8 +1375,18 @@
   .menu-footer, .footer-info, .menu-language, .footer-note {
     display: none !important;
   }
+
+  #menu.hidden,
+  #menu[hidden] {
+    display: none !important;
+  }
 }
 
 .menu-footer, .footer-info, .menu-language, .footer-note {
+  display: none !important;
+}
+
+#menu.hidden,
+#menu[hidden] {
   display: none !important;
 }

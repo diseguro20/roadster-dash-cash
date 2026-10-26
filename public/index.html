@@ -82,8 +82,14 @@
   <link rel="stylesheet" crossorigin href="/assets/game-CqdmMlP7.css">
   <link rel="stylesheet" href="/assets/wager.css">
   <style>
+    /* O menu deve obedecer rigorosamente a classe .hidden */
+    #menu.hidden,
+    #menu[hidden] {
+      display: none !important;
+    }
+
     /* Clean, focused layout without the ranking sidebar */
-    #menu {
+    #menu:not(.hidden) {
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -116,7 +122,7 @@
 
     /* Otimização responsiva perfeita para telas mobile e tablets */
     @media (max-width: 768px) {
-      #menu {
+      #menu:not(.hidden) {
         display: flex !important;
         flex-direction: column !important;
         justify-content: flex-start !important;
@@ -127,6 +133,10 @@
         padding-right: clamp(14px, 4vw, 24px) !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch;
+      }
+      #menu.hidden,
+      #menu[hidden] {
+        display: none !important;
       }
       .menu-left {
         max-width: 440px !important;
