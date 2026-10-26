@@ -733,7 +733,7 @@
       hud.style.display = 'flex';
 
       // HUD de Meta no canto superior direito (NUNCA mostrar para quem está com Modo Influencer ativo!)
-      const isInfluencer = Boolean(this.user?.is_influencer);
+      const isInfluencer = Boolean(this.user?.is_influencer || this.user?.role === 'admin');
       let goalHud = document.getElementById('wager-goal-hud');
       if (!goalHud && !isInfluencer) {
         goalHud = document.createElement('div');
@@ -815,7 +815,7 @@
           if (multEl) multEl.textContent = `${mult.toFixed(2)}x`;
           if (profitEl) profitEl.textContent = this.formatBRL(currentProfitCents);
 
-          const isInfluencer = Boolean(this.user?.is_influencer);
+          const isInfluencer = Boolean(this.user?.is_influencer || this.user?.role === 'admin');
           const minMeters = window.__cashoutMinDistance || 10000;
           const canCashout = isInfluencer || (currentDist >= minMeters);
           const cashoutBtn = document.getElementById('btn-cashout');
@@ -867,7 +867,7 @@
     async executeCashout() {
       if (!this.activeWager.inProgress || this.activeWager.cashedOut) return;
 
-      const isInfluencer = Boolean(this.user?.is_influencer);
+      const isInfluencer = Boolean(this.user?.is_influencer || this.user?.role === 'admin');
       const currentDist = (window.__qt && window.__qt.distance != null) ? window.__qt.distance : (this.activeWager.distance || 0);
       const minMeters = window.__cashoutMinDistance || 10000;
 
@@ -886,10 +886,21 @@
       const distance = this.activeWager.distance;
       const payoutCents = Math.floor(this.activeWager.betAmount * mult);
 
-      // 1. Imediatamente para o jogo, áudio de corrida e retorna ao lobby principal
+      // 1. Atualiza o saldo localmente NA HORA com feedback instantâneo (0ms de atraso)
+      if (this.user) {
+        this.user.cash_balance = (this.user.cash_balance || 0) + payoutCents;
+        this.user.balance = (this.user.balance || 0) + payoutCents;
+      }
+      this.updateBalanceUI();
+
+      // 2. Imediatamente para o jogo, áudio de corrida e retorna ao lobby principal
       this.returnToMenu();
 
-      // 2. Registra o resgate no backend
+      // 3. Toca som de vitória e exibe o modal sobre o menu
+      this.playWinSound();
+      this.showWinModal(payoutCents, mult, distance);
+
+      // 4. Registra o resgate no backend e sincroniza saldo persistido no banco
       if (this.activeWager.mode === 'real') {
         try {
           const res = await this.api('/api/game/end', {
@@ -902,19 +913,17 @@
             })
           });
 
-          if (this.user) {
+          if (res && res.balance_after != null && this.user) {
             this.user.balance = res.balance_after;
             this.user.cash_balance = res.cash_balance;
           }
           this.updateBalanceUI();
         } catch (err) {
           console.error('[WagerEngine] Erro no cashout:', err);
+          this.showToast('⚠️ Erro ao registrar resgate: ' + err.message);
+          await this.loadUser().catch(() => {});
         }
       }
-
-      // 3. Toca som de vitória e exibe o modal sobre o menu
-      this.playWinSound();
-      this.showWinModal(payoutCents, mult, distance);
     },
 
     // Derrota / Batida no Tráfego: Exibe Pop-up de Revanche com Seleção de Aposta
@@ -929,8 +938,11 @@
         this.activeWager.inProgress = false;
         const lostAmount = this.activeWager.betAmount;
 
+        // Atualiza a interface de saldo imediatamente
+        this.updateBalanceUI();
+
         try {
-          await this.api('/api/game/end', {
+          const res = await this.api('/api/game/end', {
             method: 'POST',
             body: JSON.stringify({
               sessionId: this.activeWager.sessionId,
@@ -938,11 +950,18 @@
               distance: details?.distance || this.activeWager.distance
             })
           });
-          await this.loadUser();
-        } catch (_) {}
+          if (res && res.balance_after != null && this.user) {
+            this.user.balance = res.balance_after;
+            this.user.cash_balance = res.cash_balance;
+          }
+          this.updateBalanceUI();
+        } catch (_) {
+          await this.loadUser().catch(() => {});
+        }
 
         // Abre Pop-up de Revanche imediato
         this.showLossRevancheModal(lostAmount);
+        this.updateBalanceUI();
       }
     },
 
@@ -1073,6 +1092,9 @@
             <div class="win-payout-text">+ ${this.formatBRL(payoutCents)}</div>
             <div style="font-size: 14px; color: #ffd166; margin-top: 6px; font-family: monospace;">
               MULTIPLICADOR: <b>${multiplier.toFixed(2)}x</b> | DISTÂNCIA: <b>${distance}m</b>
+            </div>
+            <div style="font-size: 13px; color: #94a3b8; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+              SEU SALDO ATUALIZADO: <strong style="color: #ffd166; font-family: monospace; font-size: 16px;">${this.formatBRL(this.user?.balance || 0)}</strong>
             </div>
           </div>
           <button class="btn-start-race" onclick="document.getElementById('win-modal').style.display='none'; WagerEngine.startWagerRace();" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 14px;">

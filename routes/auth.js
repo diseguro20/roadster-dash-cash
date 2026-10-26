@@ -17,18 +17,6 @@ router.get('/me', verifyAuth, async (req, res) => {
 
   await loadSettingsFromFirestore();
 
-  // Finaliza qualquer aposta pendente deixada por recarregamento de página ou abandono como derrota
-  const pendingBets = store.bets.filter(b => b.uid === user.id && b.status === 'pending');
-  for (const b of pendingBets) {
-    b.status = 'completed';
-    b.result = 'loss';
-    b.multiplier = 0;
-    b.payout = 0;
-    b.abandoned = true;
-    b.completed_at = now();
-    await syncToFirestore('bets', b.id, b);
-  }
-
   res.json({
     id: user.id,
     username: user.username,

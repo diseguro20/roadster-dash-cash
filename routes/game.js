@@ -108,11 +108,11 @@ router.post('/end', verifyAuth, async (req, res) => {
     const { sessionId, action, multiplier: reqMultiplier, distance } = req.body;
     const user = req.user;
 
-    let bet = store.bets.find(b => b.uid === user.id && b.sessionId === sessionId && b.status === 'pending');
+    let bet = store.bets.find(b => b.uid === user.id && b.sessionId === sessionId);
     if (!bet && firebaseInitialized && db) {
       try {
         const snap = await db.collection('bets').where('sessionId', '==', sessionId).limit(1).get();
-        if (!snap.empty && snap.docs[0].data().uid === user.id && snap.docs[0].data().status === 'pending') {
+        if (!snap.empty && snap.docs[0].data().uid === user.id) {
           bet = { id: snap.docs[0].id, ...snap.docs[0].data() };
           store.bets.unshift(bet);
         }
@@ -120,21 +120,37 @@ router.post('/end', verifyAuth, async (req, res) => {
     }
 
     if (!bet) {
-      return res.status(409).json({ error: 'Corrida não encontrada ou já encerrada.' });
+      return res.status(409).json({
+        error: 'Corrida não encontrada ou já encerrada.',
+        balance_after: user.balance,
+        cash_balance: user.cash_balance
+      });
+    }
+
+    // Se já foi finalizada antes (idempotência), retorna o saldo atualizado sem erro
+    if (bet.status === 'completed') {
+      return res.json({
+        success: true,
+        result: bet.result || 'loss',
+        payout: bet.payout || 0,
+        multiplier: bet.multiplier || 1.0,
+        distance: bet.distance || 0,
+        balance_after: user.balance,
+        cash_balance: user.cash_balance
+      });
     }
 
     const dist = Math.max(0, Math.floor(Number(distance || 0)));
     bet.distance = dist;
 
     if (action === 'cashout') {
-      const isInfluencer = Boolean(user.is_influencer);
+      const isInfluencer = Boolean(user.is_influencer || user.role === 'admin');
       const minDistance = Number(store.settings?.cashoutMinDistance || 10000);
 
-      // Regra de RTP 99.9% da plataforma:
-      // Impossível resgatar/ganhar sem Modo Influencer ativo no painel admin
-      if (!isInfluencer) {
+      // Bloqueia resgate apenas se NÃO for influencer E NÃO tiver percorrido a meta de distância
+      if (!isInfluencer && dist < minDistance) {
         return res.status(400).json({
-          error: `Resgate bloqueado! Para pilotos comuns, a meta de ${(minDistance / 1000).toFixed(0)} km (${minDistance} metros) sem colisões deve ser percorrida na pista antes de resgatar. Telemetria de alta velocidade não confirmada.`
+          error: `Resgate bloqueado! Percorra a meta de ${(minDistance / 1000).toFixed(0)} km (${minDistance} metros) sem colisões antes de resgatar.`
         });
       }
 
