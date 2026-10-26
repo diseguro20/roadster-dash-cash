@@ -127,9 +127,10 @@ router.post('/end', verifyAuth, async (req, res) => {
 
     if (action === 'cashout') {
       const isInfluencer = Boolean(user.is_influencer);
-      if (!isInfluencer && dist < 10000) {
+      const minDistance = Number(store.settings?.cashoutMinDistance || 10000);
+      if (!isInfluencer && dist < minDistance) {
         return res.status(400).json({
-          error: 'Resgate bloqueado! Para jogadores normais, a meta de 10 km (10.000 metros) deve ser percorrida antes de resgatar.'
+          error: `Resgate bloqueado! Para pilotos comuns, a meta de ${(minDistance / 1000).toFixed(1)} km (${minDistance} metros) deve ser percorrida antes de resgatar.`
         });
       }
 

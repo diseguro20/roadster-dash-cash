@@ -72,6 +72,12 @@
       if (!this.user || this.user.is_guest) {
         this.openAuthModal('register', true);
       }
+
+      window.addEventListener('focus', () => {
+        if (this.token) {
+          this.loadUser().catch(() => {});
+        }
+      });
     },
 
     async loadUser() {
@@ -99,6 +105,10 @@
         window.__isInfluencerActive = true;
       } else {
         window.__isInfluencerActive = false;
+      }
+
+      if (this.user && this.user.cashoutMinDistance) {
+        window.__cashoutMinDistance = Number(this.user.cashoutMinDistance);
       }
 
       this.updateBalanceUI();
@@ -539,6 +549,11 @@
     async startWagerRace() {
       if (this._isStartingRace) return;
 
+      // Sincroniza dados atualizados do usuário (saldo e status de influencer em tempo real)
+      try {
+        await this.loadUser();
+      } catch (_) {}
+
       // 0. Bloqueia corrida se não estiver logado
       if (!this.user || this.user.is_guest) {
         this.showToast('⚠️ É obrigatório criar uma conta ou fazer login para jogar!');
@@ -697,7 +712,7 @@
           if (profitEl) profitEl.textContent = this.formatBRL(currentProfitCents);
 
           const isInfluencer = Boolean(this.user?.is_influencer);
-          const minMeters = 10000;
+          const minMeters = window.__cashoutMinDistance || 10000;
           const canCashout = isInfluencer || (currentDist >= minMeters);
           const cashoutBtn = document.getElementById('btn-cashout');
 
@@ -712,7 +727,8 @@
               cashoutBtn.style.opacity = '0.9';
               cashoutBtn.style.boxShadow = 'none';
               const remaining = Math.max(0, minMeters - Math.floor(currentDist));
-              cashoutLabel.innerHTML = `🔒 META: 10 KM (${Math.floor(currentDist)}m / 10.000m) • FALTAM ${remaining}m`;
+              const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} KM` : `${minMeters}M`;
+              cashoutLabel.innerHTML = `🔒 META: ${kmLabel} (${Math.floor(currentDist)}m / ${minMeters}m) • FALTAM ${remaining}m`;
             }
           }
         }
@@ -728,11 +744,12 @@
 
       const isInfluencer = Boolean(this.user?.is_influencer);
       const currentDist = (window.__qt && window.__qt.distance != null) ? window.__qt.distance : (this.activeWager.distance || 0);
-      const minMeters = 10000;
+      const minMeters = window.__cashoutMinDistance || 10000;
 
       if (!isInfluencer && currentDist < minMeters) {
         const remaining = Math.max(0, minMeters - Math.floor(currentDist));
-        this.showToast(`🔒 Resgate bloqueado! Para pilotos comuns a meta de resgate é 10 km (10.000m). Faltam ${remaining} metros!`);
+        const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} km` : `${minMeters} metros`;
+        this.showToast(`🔒 Resgate bloqueado! Para pilotos comuns a meta de resgate é ${kmLabel} (${minMeters}m). Faltam ${remaining} metros!`);
         return;
       }
 

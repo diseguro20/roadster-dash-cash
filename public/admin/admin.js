@@ -1,14 +1,28 @@
 /**
  * ROADSTER DASH CASH - CONTROLADOR DO PAINEL ADMINISTRATIVO
+ * 100% FUNCIONAL E EM TEMPO REAL
  */
 
 const Admin = {
   token: localStorage.getItem('roadster_admin_token') || localStorage.getItem('roadster_token') || '',
   users: [],
   selectedUserId: null,
+  currentTab: 'overview',
+  pollingInterval: null,
+  lastSearchQuery: '',
 
   formatBRL(cents) {
     return (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  },
+
+  formatDate(isoStr) {
+    if (!isoStr) return '—';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+      return '—';
+    }
   },
 
   async api(url, options = {}) {
@@ -42,15 +56,23 @@ const Admin = {
       document.getElementById('admin-user-display').textContent = me.username;
       document.getElementById('admin-login-modal').style.display = 'none';
       document.getElementById('admin-app').style.display = 'flex';
-      this.loadStats();
-      this.loadUsers();
-      this.loadSettings();
+
+      this.showTab('overview');
+      this.startPolling();
     } catch (_) {
       this.showLogin();
     }
   },
 
+  startPolling() {
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
+    this.pollingInterval = setInterval(() => {
+      this.refreshCurrentTab(true);
+    }, 3500);
+  },
+
   showLogin() {
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
     document.getElementById('admin-app').style.display = 'none';
     document.getElementById('admin-login-modal').style.display = 'flex';
   },
@@ -75,30 +97,60 @@ const Admin = {
   },
 
   logout() {
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
     localStorage.removeItem('roadster_admin_token');
     location.reload();
   },
 
   showTab(tabName, el) {
+    this.currentTab = tabName;
     document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${tabName}`).style.display = 'block';
-    if (el) el.classList.add('active');
+
+    const targetEl = document.getElementById(`tab-${tabName}`);
+    if (targetEl) targetEl.style.display = 'block';
+
+    if (el) {
+      el.classList.add('active');
+    } else {
+      const matchBtn = Array.from(document.querySelectorAll('.nav-item')).find(b => b.getAttribute('onclick')?.includes(tabName));
+      if (matchBtn) matchBtn.classList.add('active');
+    }
 
     const titles = {
-      overview: 'Visão Geral',
+      overview: 'Visão Geral em Tempo Real',
       users: 'Gestão de Jogadores & Influenciadores',
-      deposits: 'Depósitos PIX VizzionPay',
-      withdrawals: 'Solicitações de Saque PIX',
+      deposits: 'Depósitos PIX VizzionPay (Tempo Real)',
+      withdrawals: 'Solicitações de Saque PIX (Tempo Real)',
       settings: 'Configurações da Plataforma & Dificuldade'
     };
-    document.getElementById('admin-section-title').textContent = titles[tabName] || 'Painel';
+    document.getElementById('admin-section-title').textContent = titles[tabName] || 'Painel Administrativo';
 
-    if (tabName === 'overview') this.loadStats();
-    if (tabName === 'users') this.loadUsers();
-    if (tabName === 'deposits') this.loadDeposits();
-    if (tabName === 'withdrawals') this.loadWithdrawals();
-    if (tabName === 'settings') this.loadSettings();
+    this.refreshCurrentTab(false);
+  },
+
+  async refreshCurrentTab(silent = false) {
+    if (this.currentTab === 'overview') {
+      await this.loadStats();
+    } else if (this.currentTab === 'users') {
+      await this.loadUsers();
+      if (!silent) await this.loadStats();
+    } else if (this.currentTab === 'deposits') {
+      await this.loadDeposits();
+      if (!silent) await this.loadStats();
+    } else if (this.currentTab === 'withdrawals') {
+      await this.loadWithdrawals();
+      if (!silent) await this.loadStats();
+    } else if (this.currentTab === 'settings') {
+      if (!silent) await this.loadSettings();
+    }
+
+    const indicator = document.getElementById('live-text');
+    if (indicator) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('pt-BR');
+      indicator.textContent = `AO VIVO • ${timeStr}`;
+    }
   },
 
   async loadStats() {
@@ -130,11 +182,16 @@ const Admin = {
     try {
       const data = await this.api('/api/admin/users');
       this.users = data.users || [];
-      this.renderUsersTable(this.users);
+      if (this.lastSearchQuery) {
+        this.searchUsers(this.lastSearchQuery);
+      } else {
+        this.renderUsersTable(this.users);
+      }
     } catch (_) {}
   },
 
   searchUsers(query) {
+    this.lastSearchQuery = query;
     const q = query.toLowerCase().trim();
     if (!q) {
       this.renderUsersTable(this.users);
@@ -142,39 +199,49 @@ const Admin = {
     }
     const filtered = this.users.filter(u =>
       (u.username && u.username.toLowerCase().includes(q)) ||
-      (u.email && u.email.toLowerCase().includes(q)) ||
-      (u.phone && u.phone.includes(q))
+      (u.phone && u.phone.includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q))
     );
     this.renderUsersTable(filtered);
   },
 
   renderUsersTable(list) {
     const tbody = document.getElementById('users-table-body');
+    if (!tbody) return;
     if (!list || !list.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8;">Nenhum jogador encontrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">Nenhum jogador encontrado.</td></tr>';
       return;
     }
 
     tbody.innerHTML = list.map(u => {
       const isInf = Boolean(u.is_influencer);
+      const isMaster = (u.username === 'diseguro20');
+      const phoneDisplay = u.phone ? `(${u.phone.substring(0, 2)}) ${u.phone.substring(2)}` : (u.email || '—');
+
       return `
         <tr>
           <td>
-            <strong style="color: #fff;">${u.username}</strong>
-            ${isInf ? '<span class="badge badge-influencer" style="margin-left: 6px;">⭐ INFLUENCER</span>' : ''}
+            <strong style="color: #fff; font-size: 14px;">${u.username}</strong>
+            ${isInf ? '<span class="badge badge-influencer" style="margin-left: 6px; background: rgba(255, 209, 102, 0.2); color: #ffd166; border: 1px solid #ffd166;">⭐ INFLUENCER</span>' : ''}
+            ${isMaster ? '<span class="badge" style="margin-left: 6px; background: rgba(232, 33, 39, 0.2); color: #e82127; border: 1px solid #e82127;">MESTRE</span>' : ''}
           </td>
-          <td style="color: #94a3b8; font-size: 12px;">${u.email || u.phone || '—'}</td>
-          <td style="color: #ffd166; font-family: monospace; font-weight: 700;">${this.formatBRL(u.cash_balance || u.balance)}</td>
+          <td style="color: #94a3b8; font-size: 13px; font-family: monospace;">${phoneDisplay}</td>
+          <td style="color: #ffd166; font-family: monospace; font-weight: 700; font-size: 14px;">${this.formatBRL(u.cash_balance || u.balance)}</td>
           <td>
             <button class="btn-influencer-toggle ${isInf ? 'active' : ''}" onclick="Admin.toggleInfluencer('${u.id}', ${isInf})">
               ${isInf ? '⭐ INFLUENCER ATIVO' : 'TORNAR INFLUENCER'}
             </button>
           </td>
-          <td><span class="badge" style="background: rgba(255,255,255,0.08);">${u.role}</span></td>
+          <td style="color: #94a3b8; font-size: 11px;">${this.formatDate(u.created_at)}</td>
           <td>
-            <button class="btn-action btn-edit" onclick="Admin.openEditUser('${u.id}', '${u.username}', ${u.cash_balance || u.balance})">
+            <button class="btn-action btn-edit" title="Alterar saldo do jogador" onclick="Admin.openEditUser('${u.id}', '${u.username}', ${u.cash_balance || u.balance})">
               ✏️ Saldo
             </button>
+            ${!isMaster ? `
+              <button class="btn-action btn-delete" title="Excluir piloto do sistema" onclick="Admin.deleteUser('${u.id}', '${u.username}')">
+                🗑️ Excluir
+              </button>
+            ` : ''}
           </td>
         </tr>
       `;
@@ -188,10 +255,10 @@ const Admin = {
         method: 'PUT',
         body: JSON.stringify({ is_influencer: next })
       });
-      this.loadUsers();
-      this.loadStats();
+      await this.loadUsers();
+      await this.loadStats();
     } catch (e) {
-      alert('Erro: ' + e.message);
+      alert('Erro ao alterar modo influencer: ' + e.message);
     }
   },
 
@@ -211,10 +278,23 @@ const Admin = {
         body: JSON.stringify({ cash_balance: Math.round(val * 100) })
       });
       document.getElementById('modal-edit-user').style.display = 'none';
-      this.loadUsers();
-      this.loadStats();
+      await this.loadUsers();
+      await this.loadStats();
     } catch (e) {
       alert('Erro ao atualizar saldo: ' + e.message);
+    }
+  },
+
+  async deleteUser(userId, username) {
+    if (!confirm(`Deseja realmente EXCLUIR o piloto "${username}" do banco de dados? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+    try {
+      await this.api(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      await this.loadUsers();
+      await this.loadStats();
+    } catch (e) {
+      alert('Erro ao excluir piloto: ' + e.message);
     }
   },
 
@@ -222,9 +302,10 @@ const Admin = {
     try {
       const data = await this.api('/api/admin/deposits');
       const tbody = document.getElementById('deposits-table-body');
+      if (!tbody) return;
       const list = data.deposits || [];
       if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8;">Nenhum depósito registrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Nenhum depósito registrado ainda.</td></tr>';
         return;
       }
 
@@ -236,10 +317,10 @@ const Admin = {
             <td><strong>${d.username || d.uid}</strong></td>
             <td style="color: #10b981; font-weight: 700; font-family: monospace;">${this.formatBRL(d.amount)}</td>
             <td style="color: #ffd166; font-size: 12px;">+${this.formatBRL(d.bonusAmount || 0)}</td>
-            <td><span class="badge badge-${d.status}">${d.status}</span></td>
-            <td style="color: #94a3b8; font-size: 11px;">${new Date(d.created_at).toLocaleString('pt-BR')}</td>
+            <td><span class="badge badge-${d.status}">${d.status === 'approved' ? 'Aprovado' : (d.status === 'pending' ? 'Pendente' : d.status)}</span></td>
+            <td style="color: #94a3b8; font-size: 11px;">${this.formatDate(d.created_at)}</td>
             <td>
-              ${isPending ? `<button class="btn-action btn-approve" onclick="Admin.approveDeposit('${d.id}')">✓ Aprovar</button>` : '—'}
+              ${isPending ? `<button class="btn-action btn-approve" onclick="Admin.approveDeposit('${d.id}')">✓ Aprovar PIX</button>` : '—'}
             </td>
           </tr>
         `;
@@ -251,8 +332,8 @@ const Admin = {
     if (!confirm('Deseja realmente aprovar este depósito e creditar o saldo ao piloto?')) return;
     try {
       await this.api(`/api/admin/deposits/${depId}/approve`, { method: 'POST' });
-      this.loadDeposits();
-      this.loadStats();
+      await this.loadDeposits();
+      await this.loadStats();
     } catch (e) {
       alert('Erro: ' + e.message);
     }
@@ -262,9 +343,10 @@ const Admin = {
     try {
       const data = await this.api('/api/admin/withdrawals');
       const tbody = document.getElementById('withdrawals-table-body');
+      if (!tbody) return;
       const list = data.withdrawals || [];
       if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8;">Nenhum saque registrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Nenhuma solicitação de saque registrada.</td></tr>';
         return;
       }
 
@@ -274,10 +356,10 @@ const Admin = {
           <tr>
             <td style="font-family: monospace; font-size: 11px; color: #94a3b8;">${w.id}</td>
             <td><strong>${w.username || w.uid}</strong></td>
-            <td style="font-family: monospace; color: #38bdf8;">${w.pixKey}</td>
+            <td style="font-family: monospace; color: #38bdf8; font-weight: 600;">${w.pixKey}</td>
             <td><span class="badge" style="background: rgba(255,255,255,0.06);">${w.pixType}</span></td>
             <td style="color: #ffd166; font-weight: 700; font-family: monospace;">${this.formatBRL(w.amount)}</td>
-            <td><span class="badge badge-${w.status}">${w.status}</span></td>
+            <td><span class="badge badge-${w.status}">${w.status === 'completed' ? 'Pago' : (w.status === 'pending' ? 'Pendente' : 'Recusado')}</span></td>
             <td>
               ${isPending ? `
                 <button class="btn-action btn-approve" onclick="Admin.approveWithdrawal('${w.id}')">✓ Pago</button>
@@ -291,22 +373,22 @@ const Admin = {
   },
 
   async approveWithdrawal(wthId) {
-    if (!confirm('Confirmar pagamento do saque PIX?')) return;
+    if (!confirm('Confirmar que você efetuou o pagamento deste saque PIX para a chave do piloto?')) return;
     try {
       await this.api(`/api/admin/withdrawals/${wthId}/approve`, { method: 'POST' });
-      this.loadWithdrawals();
-      this.loadStats();
+      await this.loadWithdrawals();
+      await this.loadStats();
     } catch (e) {
       alert('Erro: ' + e.message);
     }
   },
 
   async rejectWithdrawal(wthId) {
-    if (!confirm('Recusar saque? O valor será estornado de volta para o piloto.')) return;
+    if (!confirm('Recusar saque? O valor será estornado imediatamente de volta para a carteira do piloto.')) return;
     try {
       await this.api(`/api/admin/withdrawals/${wthId}/reject`, { method: 'POST' });
-      this.loadWithdrawals();
-      this.loadStats();
+      await this.loadWithdrawals();
+      await this.loadStats();
     } catch (e) {
       alert('Erro: ' + e.message);
     }
@@ -316,10 +398,14 @@ const Admin = {
     try {
       const s = await this.api('/api/admin/settings');
       if (s.difficulty) document.getElementById('set-difficulty').value = s.difficulty;
+      if (s.cashoutMinDistance) document.getElementById('set-cashout-dist').value = s.cashoutMinDistance;
       if (s.minBet) document.getElementById('set-min-bet').value = (s.minBet / 100).toFixed(2);
       if (s.maxBet) document.getElementById('set-max-bet').value = (s.maxBet / 100).toFixed(2);
       if (s.minDeposit) document.getElementById('set-min-dep').value = (s.minDeposit / 100).toFixed(2);
       if (s.minWithdrawal) document.getElementById('set-min-with').value = (s.minWithdrawal / 100).toFixed(2);
+      if (s.vizzionpayApiKey) document.getElementById('set-vp-key').value = s.vizzionpayApiKey;
+      if (s.vizzionpayApiSecret) document.getElementById('set-vp-secret').value = s.vizzionpayApiSecret;
+      if (s.vizzionpayWebhookUrl) document.getElementById('set-vp-webhook').value = s.vizzionpayWebhookUrl;
     } catch (_) {}
   },
 
@@ -330,9 +416,29 @@ const Admin = {
         body: JSON.stringify({ level })
       });
       alert('Dificuldade atualizada com sucesso para: ' + level);
-      this.loadStats();
+      await this.loadStats();
     } catch (e) {
       alert('Erro: ' + e.message);
+    }
+  },
+
+  async testVizzionPay() {
+    const resultEl = document.getElementById('vp-test-result');
+    if (resultEl) {
+      resultEl.textContent = 'Verificando conexão...';
+      resultEl.style.color = '#ffd166';
+    }
+    try {
+      const res = await this.api('/api/admin/test-vizzionpay');
+      if (resultEl) {
+        resultEl.textContent = res.success ? `✅ ${res.message}` : `❌ ${res.message}`;
+        resultEl.style.color = res.success ? '#10b981' : '#ff4d4f';
+      }
+    } catch (e) {
+      if (resultEl) {
+        resultEl.textContent = '❌ Falha: ' + e.message;
+        resultEl.style.color = '#ff4d4f';
+      }
     }
   },
 
@@ -341,16 +447,31 @@ const Admin = {
     const maxBet = Math.round(parseFloat(document.getElementById('set-max-bet').value || '500') * 100);
     const minDeposit = Math.round(parseFloat(document.getElementById('set-min-dep').value || '20') * 100);
     const minWithdrawal = Math.round(parseFloat(document.getElementById('set-min-with').value || '10') * 100);
+    const cashoutMinDistance = parseInt(document.getElementById('set-cashout-dist').value || '10000', 10);
+    const difficulty = document.getElementById('set-difficulty').value;
+    const vizzionpayApiKey = document.getElementById('set-vp-key').value.trim();
+    const vizzionpayApiSecret = document.getElementById('set-vp-secret').value.trim();
+    const vizzionpayWebhookUrl = document.getElementById('set-vp-webhook').value.trim();
 
     try {
       await this.api('/api/admin/settings', {
         method: 'POST',
-        body: JSON.stringify({ minBet, maxBet, minDeposit, minWithdrawal })
+        body: JSON.stringify({
+          minBet,
+          maxBet,
+          minDeposit,
+          minWithdrawal,
+          cashoutMinDistance,
+          difficulty,
+          vizzionpayApiKey,
+          vizzionpayApiSecret,
+          vizzionpayWebhookUrl
+        })
       });
-      alert('Configurações salvas com sucesso!');
-      this.loadStats();
+      alert('Configurações da plataforma salvas com sucesso em tempo real!');
+      await this.loadStats();
     } catch (e) {
-      alert('Erro ao salvar: ' + e.message);
+      alert('Erro ao salvar configurações: ' + e.message);
     }
   }
 };

@@ -65,7 +65,14 @@
           <small style="color: #94a3b8; font-weight: 700; font-size: 11px;">PAINEL DE CONTROLE</small>
           <h1 class="page-title" id="admin-section-title">Visão Geral</h1>
         </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div class="live-status-pill" id="live-indicator" title="Sincronização em tempo real">
+            <span class="live-dot pulse"></span>
+            <span id="live-text">TEMPO REAL (3s)</span>
+          </div>
+          <button class="btn-action btn-approve" style="padding: 7px 12px; font-size: 12px;" onclick="Admin.refreshCurrentTab()">
+            🔄 Atualizar
+          </button>
           <span style="font-size: 13px; color: #94a3b8;">Admin: <b style="color: #fff;" id="admin-user-display">diseguro20</b></span>
           <button class="btn-action btn-reject" onclick="Admin.logout()">Sair</button>
         </div>
@@ -131,15 +138,15 @@
             <thead>
               <tr>
                 <th>Piloto</th>
-                <th>Contato</th>
-                <th>Saldo Dinheiro</th>
+                <th>Celular / Contato</th>
+                <th>Saldo em Carteira</th>
                 <th>Modo Influencer</th>
-                <th>Papel</th>
+                <th>Cadastro</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody id="users-table-body">
-              <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Carregando pilotos...</td></tr>
+              <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Carregando pilotos reais...</td></tr>
             </tbody>
           </table>
         </div>
@@ -208,10 +215,16 @@
             <label>NÍVEL DE DIFICULDADE GLOBAL</label>
             <select id="set-difficulty" onchange="Admin.saveDifficulty(this.value)">
               <option value="hard">🔥 MUITO DIFÍCIL (Padrão: Tráfego denso e agressivo, exige cashout rápido)</option>
-              <option value="impossible">💀 IMPOSSÍVEL (Lethal: Tráfego extremo, batida garantida após 1.5x)</option>
+              <option value="impossible">💀 IMPOSSÍVEL (Lethal: Tráfego extremo, batida garantida)</option>
               <option value="balanced">⚖️ EQUILIBRADO (Médio)</option>
-              <option value="influencer">⭐ MODO INFLUENCER GLOBAL (Fácil: Quase impossível bater, vitória garantida)</option>
+              <option value="influencer">⭐ MODO INFLUENCER GLOBAL (Fácil: Quase impossível bater)</option>
             </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label>META DE DISTÂNCIA PARA RESGATE (JOGADORES NORMAIS - METROS)</label>
+            <input type="number" id="set-cashout-dist" value="10000" min="500" step="500" />
+            <small style="color: #94a3b8; font-size: 11px; display: block; margin-top: 4px;">Padrão: 10.000m (10 km). Pilotos sem modo influencer só podem resgatar lucros após atingir esta distância.</small>
           </div>
 
           <h3 style="margin: 24px 0 16px 0; color: #ffd166;">💰 Limites de Apostas e Transações</h3>
@@ -233,8 +246,29 @@
               <input type="number" id="set-min-with" value="10.00" step="5" />
             </div>
           </div>
-          <button class="btn-action btn-approve" style="padding: 12px 24px; font-size: 14px; margin-top: 10px;" onclick="Admin.saveLimits()">
-            SALVAR CONFIGURAÇÕES
+
+          <h3 style="margin: 24px 0 16px 0; color: #ffd166;">⚡ Gateway PIX VizzionPay</h3>
+          <div class="form-group">
+            <label>CHAVE DE API VIZZIONPAY (API KEY)</label>
+            <input type="text" id="set-vp-key" placeholder="diseguro20_..." />
+          </div>
+          <div class="form-group">
+            <label>SEGREDO DE API VIZZIONPAY (API SECRET)</label>
+            <input type="password" id="set-vp-secret" placeholder="p4mgth35kid..." />
+          </div>
+          <div class="form-group">
+            <label>URL DO WEBHOOK (COPIE E COLE NA VIZZIONPAY)</label>
+            <input type="text" id="set-vp-webhook" value="https://roadster-dash-cash.vercel.app/api/webhook/vizzionpay" readonly style="opacity: 0.8; font-family: monospace; font-size: 12px;" />
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+            <button type="button" class="btn-action btn-edit" style="padding: 9px 16px;" onclick="Admin.testVizzionPay()">
+              🔍 Testar Conexão VizzionPay
+            </button>
+            <span id="vp-test-result" style="font-size: 12px; font-weight: 600;"></span>
+          </div>
+
+          <button class="btn-action btn-approve" style="padding: 12px 24px; font-size: 14px; width: 100%; justify-content: center;" onclick="Admin.saveLimits()">
+            💾 SALVAR TODAS AS CONFIGURAÇÕES
           </button>
         </div>
       </section>

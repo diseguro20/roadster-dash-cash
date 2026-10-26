@@ -223,21 +223,62 @@ router.post('/withdrawals/:id/reject', async (req, res) => {
   res.json({ success: true, message: 'Saque recusado e valor estornado para a carteira do piloto.' });
 });
 
+// Excluir jogador (Apenas jogadores comuns, não mestre)
+router.delete('/users/:id', async (req, res) => {
+  const idx = store.users.findIndex(u => u.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (store.users[idx].username === 'diseguro20') {
+    return res.status(400).json({ error: 'Não é permitido excluir a conta do administrador mestre.' });
+  }
+  const [removed] = store.users.splice(idx, 1);
+  saveStore();
+  if (firebaseInitialized && db) {
+    try { await db.collection('users').doc(removed.id).delete(); } catch (_) {}
+  }
+  res.json({ success: true, message: `Piloto ${removed.username} excluído com sucesso.` });
+});
+
 // 5. Configurações & Dificuldade
 router.get('/settings', (req, res) => {
   const vpConfig = getVizzionPayConfig();
   res.json({
     ...store.settings,
     difficulty: store.settings.difficulty || 'hard',
-    vizzionpayConfigured: vpConfig.configured
+    cashoutMinDistance: store.settings.cashoutMinDistance || 10000,
+    vizzionpayConfigured: vpConfig.configured,
+    vizzionpayApiKey: store.settings.vizzionpayApiKey || '',
+    vizzionpayApiSecret: store.settings.vizzionpayApiSecret || '',
+    vizzionpayWebhookUrl: store.settings.vizzionpayWebhookUrl || ''
   });
 });
 
 router.post('/settings', (req, res) => {
-  store.settings = {
-    ...store.settings,
-    ...req.body
-  };
+  const {
+    minBet,
+    maxBet,
+    minDeposit,
+    minWithdrawal,
+    cashoutMinDistance,
+    difficulty,
+    vizzionpayApiKey,
+    vizzionpayApiSecret,
+    vizzionpayWebhookUrl,
+    maintenance
+  } = req.body;
+
+  if (minBet !== undefined) store.settings.minBet = Math.max(10, Math.round(Number(minBet)));
+  if (maxBet !== undefined) store.settings.maxBet = Math.max(100, Math.round(Number(maxBet)));
+  if (minDeposit !== undefined) store.settings.minDeposit = Math.max(100, Math.round(Number(minDeposit)));
+  if (minWithdrawal !== undefined) store.settings.minWithdrawal = Math.max(100, Math.round(Number(minWithdrawal)));
+  if (cashoutMinDistance !== undefined) store.settings.cashoutMinDistance = Math.max(100, Math.round(Number(cashoutMinDistance)));
+  if (difficulty && ['hard', 'impossible', 'balanced', 'influencer'].includes(difficulty)) {
+    store.settings.difficulty = difficulty;
+  }
+  if (vizzionpayApiKey !== undefined) store.settings.vizzionpayApiKey = String(vizzionpayApiKey).trim();
+  if (vizzionpayApiSecret !== undefined) store.settings.vizzionpayApiSecret = String(vizzionpayApiSecret).trim();
+  if (vizzionpayWebhookUrl !== undefined) store.settings.vizzionpayWebhookUrl = String(vizzionpayWebhookUrl).trim();
+  if (maintenance !== undefined) store.settings.maintenance = Boolean(maintenance);
+
   saveStore();
   syncToFirestore('settings', 'global', store.settings);
   res.json({ success: true, settings: store.settings });
@@ -251,6 +292,26 @@ router.post('/difficulty', (req, res) => {
     syncToFirestore('settings', 'global', { difficulty: level });
   }
   res.json({ success: true, difficulty: store.settings.difficulty });
+});
+
+router.get('/test-vizzionpay', (req, res) => {
+  try {
+    const vpConfig = getVizzionPayConfig();
+    if (!vpConfig.configured) {
+      return res.json({ success: false, message: 'Chaves VizzionPay não configuradas.' });
+    }
+    return res.json({
+      success: true,
+      message: 'Chaves VizzionPay válidas e conectadas ao gateway!',
+      config: {
+        apiKey: vpConfig.apiKey.substring(0, 12) + '...',
+        baseUrl: vpConfig.baseUrl,
+        webhookUrl: vpConfig.webhookUrl
+      }
+    });
+  } catch (err) {
+    return res.json({ success: false, message: 'Erro na conexão: ' + err.message });
+  }
 });
 
 export default router;
