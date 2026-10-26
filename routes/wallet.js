@@ -1,5 +1,6 @@
 import express from 'express';
-import { store, saveStore, addTransaction, syncToFirestore, updateUser, approveDepositAndCreditUser } from '../lib/database.js';
+import { store, saveStore, addTransaction, syncToFirestore, updateUser, getUserFresh, approveDepositAndCreditUser } from '../lib/database.js';
+import { db, firebaseInitialized } from '../lib/firebase.js';
 import { createVizzionPayPix, checkVizzionPayStatus } from '../lib/vizzionpay.js';
 import { verifyAuth } from '../middleware/auth.js';
 
