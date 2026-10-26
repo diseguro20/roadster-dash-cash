@@ -73,22 +73,31 @@ router.post('/guest', async (req, res) => {
   }
 });
 
-// Login (Compatível com Usuário, E-mail ou Número de Celular)
+// Login (Jogadores entram com Celular ou Nome de Piloto. Somente a conta admin pode usar E-mail)
 router.post('/login', async (req, res) => {
   try {
     const { login, password } = req.body;
     if (!login || !password) {
-      return res.status(400).json({ error: 'Informe usuário/celular e senha.' });
+      return res.status(400).json({ error: 'Informe seu celular/piloto e senha.' });
     }
 
     const clean = String(login).trim().toLowerCase();
     const cleanDigits = clean.replace(/\D/g, '');
 
-    const user = store.users.find(u =>
-      (u.username && u.username.toLowerCase() === clean) ||
-      (u.email && u.email.toLowerCase() === clean) ||
-      (cleanDigits.length >= 10 && u.phone && u.phone.replace(/\D/g, '') === cleanDigits)
-    );
+    let user;
+    if (clean.includes('@')) {
+      // Regra estrita: Somente a conta de administrador pode efetuar login com e-mail
+      if (clean === 'diseguro20@gmail.com') {
+        user = store.users.find(u => u.email && u.email.toLowerCase() === 'diseguro20@gmail.com');
+      } else {
+        return res.status(401).json({ error: 'Login com e-mail exclusivo do administrador. Jogadores entram com celular ou piloto.' });
+      }
+    } else {
+      user = store.users.find(u =>
+        (u.username && u.username.toLowerCase() === clean) ||
+        (cleanDigits.length >= 10 && u.phone && u.phone.replace(/\D/g, '') === cleanDigits)
+      );
+    }
 
     if (!user || !user.password_hash) {
       return res.status(401).json({ error: 'Credenciais inválidas.' });
@@ -106,7 +115,7 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
-        email: user.email,
+        email: user.email || '',
         phone: user.phone || '',
         balance: user.balance || 0,
         cash_balance: user.cash_balance || 0,
@@ -121,10 +130,10 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Cadastro simplificado (Nome, Celular com DDD e Senha obrigatórios; E-mail opcional)
+// Cadastro (Apenas Nome de Piloto, Número de Celular com DDD e Senha - Sem E-mail)
 router.post('/register', async (req, res) => {
   try {
-    const { username, phone, password, email } = req.body;
+    const { username, phone, password } = req.body;
 
     // Validação de nome de piloto
     if (!username) {
@@ -159,18 +168,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Este número de celular já está cadastrado em outra conta.' });
     }
 
-    // Validação de e-mail (OPCIONAL)
-    const cleanEmail = email ? String(email).trim().toLowerCase() : '';
-    if (cleanEmail) {
-      if (store.users.some(u => u.email && u.email.toLowerCase() === cleanEmail)) {
-        return res.status(400).json({ error: 'Este e-mail já está cadastrado em outra conta.' });
-      }
-    }
-
     const newUser = {
       id: uuid(),
       username: cleanUsername,
-      email: cleanEmail || '',
+      email: '',
       phone: cleanPhone,
       password_hash: await bcrypt.hash(password, 10),
       balance: 0,

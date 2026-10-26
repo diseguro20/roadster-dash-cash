@@ -242,12 +242,8 @@
           <div><span class="k" data-i18n="menu.distance">DIST</span><span class="v mono" id="best-dist">—</span></div>
         </div>
         <div id="challenge" class="challenge hidden"></div>
-        <!-- ── PAINEL DE APOSTAS E CORRIDA ── -->
+        <!-- ── PAINEL DE APOSTAS E CORRIDA (100% VALENDO REAL) ── -->
         <div class="wager-box">
-          <div class="wager-mode-toggle">
-            <button class="mode-btn active" data-mode="real">💰 VALENDO REAL</button>
-            <button class="mode-btn" data-mode="demo">🎮 MODO TREINO</button>
-          </div>
           <div class="wager-header">
             <span class="wager-title">VALOR DA APOSTA</span>
             <span style="font-size: 11px; color: #ffd166;">RETORNO POR HABILIDADE</span>
@@ -445,7 +441,7 @@
           </button>
         </div>
 
-        <!-- Formulário de Cadastro (Apenas Nome, Celular e Senha obrigatórios; E-mail opcional) -->
+        <!-- Formulário de Cadastro (Apenas Nome, Celular e Senha - Sem E-mail) -->
         <form id="form-register" onsubmit="WagerEngine.handleRegister(event)">
           <div class="auth-input-group">
             <label for="reg-username">NOME DE PILOTO (OBRIGATÓRIO):</label>
@@ -467,11 +463,6 @@
             <input type="password" id="reg-password-confirm" class="pix-code-input auth-input" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
           </div>
 
-          <div class="auth-input-group">
-            <label for="reg-email">E-MAIL (OPCIONAL):</label>
-            <input type="email" id="reg-email" class="pix-code-input auth-input" placeholder="seuemail@exemplo.com (opcional)" autocomplete="email" />
-          </div>
-
           <div id="reg-error-msg" class="auth-error-msg" style="display: none;"></div>
 
           <button type="submit" id="btn-submit-reg" class="btn-start-race" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 14px;">
@@ -483,11 +474,11 @@
           </div>
         </form>
 
-        <!-- Formulário de Login (Compatível com Usuário, Celular ou E-mail) -->
+        <!-- Formulário de Login (Celular ou Piloto - Admin pode usar seu E-mail) -->
         <form id="form-login" onsubmit="WagerEngine.handleLogin(event)" style="display: none;">
           <div class="auth-input-group">
-            <label for="login-identity">USUÁRIO, CELULAR OU E-MAIL:</label>
-            <input type="text" id="login-identity" class="pix-code-input auth-input" placeholder="Seu nome, celular ou e-mail" required autocomplete="username" />
+            <label for="login-identity">CELULAR OU NOME DE PILOTO:</label>
+            <input type="text" id="login-identity" class="pix-code-input auth-input" placeholder="Seu celular com DDD ou piloto" required autocomplete="username" />
           </div>
 
           <div class="auth-input-group">

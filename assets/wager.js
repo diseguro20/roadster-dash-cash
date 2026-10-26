@@ -12,7 +12,7 @@
     token: localStorage.getItem('roadster_token') || '',
     activeWager: {
       inProgress: false,
-      mode: 'real', // 'real' | 'demo'
+      mode: 'real',
       betAmount: 200, // em centavos (R$ 2,00)
       hasSelectedBet: true,
       sessionId: null,
@@ -20,7 +20,6 @@
       cashedOut: false,
       distance: 0
     },
-    demoBalance: 5000,
     pollingTimer: null,
     _lastHudUpdate: 0,
     _isStartingRace: false,
@@ -154,14 +153,9 @@
         return;
       }
 
-      if (this.activeWager.mode === 'demo') {
-        balanceEl.textContent = this.formatBRL(this.demoBalance) + ' (DEMO)';
-        balanceEl.style.color = '#38bdf8';
-      } else {
-        const total = (this.user?.balance != null) ? this.user.balance : 0;
-        balanceEl.textContent = this.formatBRL(total);
-        balanceEl.style.color = '#ffd166';
-      }
+      const total = (this.user?.balance != null) ? this.user.balance : 0;
+      balanceEl.textContent = this.formatBRL(total);
+      balanceEl.style.color = '#ffd166';
     },
 
     openAuthModal(tab = 'register', isGate = false) {
@@ -314,7 +308,6 @@
       if (e) e.preventDefault();
       const usernameInput = document.getElementById('reg-username');
       const phoneInput = document.getElementById('reg-phone');
-      const emailInput = document.getElementById('reg-email');
       const passInput = document.getElementById('reg-password');
       const passConfirmInput = document.getElementById('reg-password-confirm');
       const errEl = document.getElementById('reg-error-msg');
@@ -322,7 +315,6 @@
 
       const username = usernameInput?.value?.trim() || '';
       const phone = phoneInput?.value?.trim() || '';
-      const email = emailInput?.value?.trim() || '';
       const password = passInput?.value || '';
       const confirm = passConfirmInput?.value || '';
 
@@ -368,7 +360,7 @@
       try {
         const res = await this.api('/api/auth/register', {
           method: 'POST',
-          body: JSON.stringify({ username, phone: cleanPhone, password, email })
+          body: JSON.stringify({ username, phone: cleanPhone, password })
         });
 
         this.token = res.token;
@@ -407,7 +399,6 @@
       const input = document.getElementById('wager-amount-input');
       const quickBtns = document.querySelectorAll('.quick-btn');
       const startBtn = document.getElementById('btn-wager-start');
-      const modeBtns = document.querySelectorAll('.mode-btn');
 
       if (input) {
         input.value = (this.activeWager.betAmount / 100).toFixed(2);
@@ -434,16 +425,6 @@
         });
       });
 
-      modeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          modeBtns.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          this.activeWager.mode = btn.dataset.mode;
-          this.updateBalanceUI();
-          this.updateStartButtonLabel();
-        });
-      });
-
       if (startBtn) {
         startBtn.addEventListener('click', (e) => {
           e.preventDefault();
@@ -467,13 +448,8 @@
       const btn = document.getElementById('btn-wager-start');
       if (!btn) return;
       const formatted = this.formatBRL(this.activeWager.betAmount);
-      if (this.activeWager.mode === 'demo') {
-        btn.innerHTML = `🎮 CORRIDA TREINO (${formatted})`;
-        btn.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
-      } else {
-        btn.innerHTML = `🏎️ INICIAR CORRIDA (${formatted})`;
-        btn.style.background = 'linear-gradient(135deg, #e82127 0%, #b8151a 100%)';
-      }
+      btn.innerHTML = `🏎️ INICIAR CORRIDA (${formatted})`;
+      btn.style.background = 'linear-gradient(135deg, #e82127 0%, #b8151a 100%)';
     },
 
     showStartLoading(amountText, statusText) {
@@ -587,13 +563,11 @@
       const formattedAmount = this.formatBRL(amount);
 
       // 2. Sempre verifica saldo na conta antes de disparar o jogo
-      if (this.activeWager.mode === 'real') {
-        const currentBalance = (this.user?.balance != null) ? this.user.balance : 0;
-        if (currentBalance < amount) {
-          this.showToast(`⚠️ Saldo insuficiente! Você possui ${this.formatBRL(currentBalance)} e escolheu apostar ${formattedAmount}. Faça um PIX para jogar.`);
-          this.openDepositModal();
-          return;
-        }
+      const currentBalance = (this.user?.balance != null) ? this.user.balance : 0;
+      if (currentBalance < amount) {
+        this.showToast(`⚠️ Saldo insuficiente! Você possui ${this.formatBRL(currentBalance)} e escolheu apostar ${formattedAmount}. Faça um PIX para jogar.`);
+        this.openDepositModal();
+        return;
       }
 
       // 3. Exibe tela de carregamento IMEDIATAMENTE (sem sensação de congelamento)
@@ -608,39 +582,27 @@
       const gameOverEl = document.getElementById('gameover');
       if (gameOverEl) gameOverEl.classList.add('hidden');
 
-      if (this.activeWager.mode === 'real') {
-        try {
-          const res = await this.api('/api/game/start', {
-            method: 'POST',
-            body: JSON.stringify({ amount })
-          });
+      try {
+        const res = await this.api('/api/game/start', {
+          method: 'POST',
+          body: JSON.stringify({ amount })
+        });
 
-          this.activeWager.sessionId = res.sessionId;
-          this.activeWager.inProgress = true;
-          this.activeWager.cashedOut = false;
-          this.activeWager.multiplier = 1.0;
-          this.activeWager.distance = 0;
-
-          if (this.user) {
-            this.user.balance = res.balance_after;
-            this.user.cash_balance = res.cash_balance;
-          }
-          this.updateBalanceUI();
-        } catch (err) {
-          this.hideStartLoading();
-          this.showToast('Erro ao iniciar corrida: ' + err.message);
-          return;
-        }
-      } else {
-        // Modo Demo
-        if (this.demoBalance < amount) this.demoBalance += 10000;
-        this.demoBalance -= amount;
-        this.activeWager.sessionId = 'demo_' + Date.now();
+        this.activeWager.sessionId = res.sessionId;
         this.activeWager.inProgress = true;
         this.activeWager.cashedOut = false;
         this.activeWager.multiplier = 1.0;
         this.activeWager.distance = 0;
+
+        if (this.user) {
+          this.user.balance = res.balance_after;
+          this.user.cash_balance = res.cash_balance;
+        }
         this.updateBalanceUI();
+      } catch (err) {
+        this.hideStartLoading();
+        this.showToast('Erro ao iniciar corrida: ' + err.message);
+        return;
       }
 
       this.updateStartLoadingStatus('🚀 Carregando pista 3D e liberando propulsores...');
@@ -779,9 +741,6 @@
         } catch (err) {
           console.error('[WagerEngine] Erro no cashout:', err);
         }
-      } else {
-        this.demoBalance += payoutCents;
-        this.updateBalanceUI();
       }
 
       // 3. Toca som de vitória e exibe o modal sobre o menu
@@ -801,19 +760,17 @@
         this.activeWager.inProgress = false;
         const lostAmount = this.activeWager.betAmount;
 
-        if (this.activeWager.mode === 'real') {
-          try {
-            await this.api('/api/game/end', {
-              method: 'POST',
-              body: JSON.stringify({
-                sessionId: this.activeWager.sessionId,
-                action: 'crash',
-                distance: details?.distance || this.activeWager.distance
-              })
-            });
-            await this.loadUser();
-          } catch (_) {}
-        }
+        try {
+          await this.api('/api/game/end', {
+            method: 'POST',
+            body: JSON.stringify({
+              sessionId: this.activeWager.sessionId,
+              action: 'crash',
+              distance: details?.distance || this.activeWager.distance
+            })
+          });
+          await this.loadUser();
+        } catch (_) {}
 
         // Abre Pop-up de Revanche imediato
         this.showLossRevancheModal(lostAmount);
@@ -842,7 +799,7 @@
         document.body.appendChild(modal);
       }
 
-      const balance = (this.activeWager.mode === 'real') ? (this.user?.balance || 0) : this.demoBalance;
+      const balance = this.user?.balance || 0;
       const currentBet = this.activeWager.betAmount || 200;
       const hasBalance = balance >= currentBet;
 
@@ -893,7 +850,7 @@
       document.querySelectorAll('#loss-revanche-modal .quick-btn').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
 
-      const balance = (this.activeWager.mode === 'real') ? (this.user?.balance || 0) : this.demoBalance;
+      const balance = this.user?.balance || 0;
       const hasBalance = balance >= cents;
       const area = document.getElementById('revanche-action-btn-area');
       if (area) {
