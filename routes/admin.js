@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
-import { store, saveStore, addTransaction, syncToFirestore, updateUser, getUserFresh, approveDepositAndCreditUser } from '../lib/database.js';
+import { store, saveStore, addTransaction, syncToFirestore, updateUser, getUserFresh, approveDepositAndCreditUser, loadSettingsFromFirestore } from '../lib/database.js';
 import { db, firebaseInitialized } from '../lib/firebase.js';
 import { verifyAuth } from '../middleware/auth.js';
 import { getVizzionPayConfig } from '../lib/vizzionpay.js';
@@ -52,13 +52,14 @@ router.get('/stats', async (req, res) => {
   const approvedDeposits = store.deposits.filter(d => d.status === 'approved');
   const pendingWithdrawals = store.withdrawals.filter(w => w.status === 'pending');
 
-  const totalWalletBalance = store.users.reduce((sum, u) => sum + (u.balance || 0), 0);
+  const genuineUsers = store.users.filter(u => u && !u.id.startsWith('pilot_') && !u.is_guest);
+  const totalWalletBalance = genuineUsers.reduce((sum, u) => sum + (u.balance || 0), 0);
   const vpConfig = getVizzionPayConfig();
 
   res.json({
-    totalUsers: store.users.length,
-    activeUsers: store.users.filter(u => u.status === 'active').length,
-    influencersCount: store.users.filter(u => Boolean(u.is_influencer)).length,
+    totalUsers: genuineUsers.length,
+    activeUsers: genuineUsers.filter(u => u.status === 'active').length,
+    influencersCount: genuineUsers.filter(u => Boolean(u.is_influencer)).length,
     totalGames: completedBets.length,
     wins: completedBets.filter(b => b.result === 'win').length,
     losses: completedBets.filter(b => b.result === 'loss').length,
@@ -83,6 +84,8 @@ router.get(['/users', '/players'], async (req, res) => {
       const snap = await db.collection('users').get();
       snap.docs.forEach(doc => {
         const d = doc.data();
+        // Não adiciona fakes/pilotos convidados legados
+        if (doc.id.startsWith('pilot_') || d.is_guest) return;
         const existing = store.users.find(u => u.id === doc.id);
         if (existing) {
           Object.assign(existing, d);
@@ -96,6 +99,10 @@ router.get(['/users', '/players'], async (req, res) => {
   const search = String(req.query.search || '').toLowerCase().trim();
   const users = store.users
     .filter(u => {
+      if (!u || !u.id) return false;
+      if (u.id.startsWith('pilot_')) return false;
+      if (u.is_guest === true) return false;
+      if (u.username && u.username.toLowerCase().startsWith('pilot_')) return false;
       if (!search) return true;
       return (
         (u.username && u.username.toLowerCase().includes(search)) ||
@@ -239,12 +246,13 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 // 5. Configurações & Dificuldade
-router.get('/settings', (req, res) => {
+router.get('/settings', async (req, res) => {
+  await loadSettingsFromFirestore();
   const vpConfig = getVizzionPayConfig();
   res.json({
     ...store.settings,
     difficulty: store.settings.difficulty || 'hard',
-    cashoutMinDistance: store.settings.cashoutMinDistance || 2000,
+    cashoutMinDistance: store.settings.cashoutMinDistance || 10000,
     vizzionpayConfigured: vpConfig.configured,
     vizzionpayApiKey: store.settings.vizzionpayApiKey || '',
     vizzionpayApiSecret: store.settings.vizzionpayApiSecret || '',
@@ -252,7 +260,7 @@ router.get('/settings', (req, res) => {
   });
 });
 
-router.post('/settings', (req, res) => {
+router.post('/settings', async (req, res) => {
   const {
     minBet,
     maxBet,
@@ -280,16 +288,16 @@ router.post('/settings', (req, res) => {
   if (maintenance !== undefined) store.settings.maintenance = Boolean(maintenance);
 
   saveStore();
-  syncToFirestore('settings', 'global', store.settings);
+  await syncToFirestore('settings', 'global', store.settings);
   res.json({ success: true, settings: store.settings });
 });
 
-router.post('/difficulty', (req, res) => {
+router.post('/difficulty', async (req, res) => {
   const { level } = req.body;
   if (['hard', 'impossible', 'balanced', 'influencer'].includes(level)) {
     store.settings.difficulty = level;
     saveStore();
-    syncToFirestore('settings', 'global', { difficulty: level });
+    await syncToFirestore('settings', 'global', { difficulty: level });
   }
   res.json({ success: true, difficulty: store.settings.difficulty });
 });

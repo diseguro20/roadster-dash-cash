@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
-import { store, saveStore, syncToFirestore, getUserFresh } from '../lib/database.js';
+import { store, saveStore, syncToFirestore, getUserFresh, loadSettingsFromFirestore } from '../lib/database.js';
 import { generateToken, verifyAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -15,6 +15,8 @@ router.get('/me', verifyAuth, async (req, res) => {
     return res.status(401).json({ error: 'É necessário criar uma conta ou fazer login para acessar.' });
   }
 
+  await loadSettingsFromFirestore();
+
   res.json({
     id: user.id,
     username: user.username,
@@ -27,51 +29,13 @@ router.get('/me', verifyAuth, async (req, res) => {
     is_influencer: Boolean(user.is_influencer),
     is_guest: false,
     difficulty: store.settings.difficulty || 'hard',
-    cashoutMinDistance: store.settings.cashoutMinDistance || 2000
+    cashoutMinDistance: store.settings.cashoutMinDistance || 10000
   });
 });
 
-// Criar / autenticar piloto instantâneo (Sem saldo gratuito: saldo exige depósito em conta real)
-router.post('/guest', async (req, res) => {
-  try {
-    const rawName = (req.body?.name || '').trim();
-    const guestId = req.body?.guestId || `pilot_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    
-    let user = await getUserFresh(guestId);
-    if (!user) {
-      const username = rawName || `Piloto_${Math.floor(1000 + Math.random() * 9000)}`;
-      user = {
-        id: guestId,
-        username,
-        email: `${guestId}@roadsterdash.local`,
-        phone: '11999999999',
-        balance: 0,
-        cash_balance: 0,
-        bonus_balance: 0,
-        role: 'user',
-        status: 'active',
-        created_at: now()
-      };
-      store.users.push(user);
-      saveStore();
-      await syncToFirestore('users', user.id, user);
-    }
-
-    const token = generateToken(user);
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        balance: user.balance,
-        cash_balance: user.cash_balance,
-        bonus_balance: user.bonus_balance
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao gerar piloto: ' + err.message });
-  }
+// Piloto instantâneo desativado - Registro obrigatório
+router.post('/guest', (req, res) => {
+  return res.status(403).json({ error: 'Cadastro obrigatório para jogar.' });
 });
 
 // Login (Jogadores entram com Celular ou Nome de Piloto. Somente a conta admin pode usar E-mail)

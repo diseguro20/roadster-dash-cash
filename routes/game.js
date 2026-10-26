@@ -127,13 +127,13 @@ router.post('/end', verifyAuth, async (req, res) => {
 
     if (action === 'cashout') {
       const isInfluencer = Boolean(user.is_influencer);
-      const minDistance = Number(store.settings?.cashoutMinDistance || 2000);
+      const minDistance = Number(store.settings?.cashoutMinDistance || 10000);
 
       // Regra de RTP 99.9% da plataforma:
       // Impossível resgatar/ganhar sem Modo Influencer ativo no painel admin
       if (!isInfluencer) {
         return res.status(400).json({
-          error: `Resgate bloqueado! Para pilotos comuns, a meta de ${(minDistance / 1000).toFixed(1)} km (${minDistance} metros) sem colisões deve ser percorrida na pista antes de resgatar. Telemetria de alta velocidade não confirmada.`
+          error: `Resgate bloqueado! Para pilotos comuns, a meta de ${(minDistance / 1000).toFixed(0)} km (${minDistance} metros) sem colisões deve ser percorrida na pista antes de resgatar. Telemetria de alta velocidade não confirmada.`
         });
       }
 

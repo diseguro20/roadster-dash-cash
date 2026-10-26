@@ -109,6 +109,8 @@
 
       if (this.user && this.user.cashoutMinDistance) {
         window.__cashoutMinDistance = Number(this.user.cashoutMinDistance);
+      } else {
+        window.__cashoutMinDistance = 10000;
       }
 
       this.updateBalanceUI();
@@ -663,6 +665,26 @@
       }
       hud.style.display = 'flex';
 
+      // HUD de Meta no canto superior direito
+      let goalHud = document.getElementById('wager-goal-hud');
+      if (!goalHud) {
+        goalHud = document.createElement('div');
+        goalHud.id = 'wager-goal-hud';
+        goalHud.className = 'wager-goal-hud';
+        goalHud.innerHTML = `
+          <div class="goal-hud-top">
+            <span class="goal-hud-icon">🎯</span>
+            <span class="goal-hud-title" id="goal-hud-title">META: 10 KM</span>
+          </div>
+          <div class="goal-hud-body">
+            <div class="goal-hud-bar"><div class="goal-hud-fill" id="goal-hud-fill"></div></div>
+            <span class="goal-hud-dist" id="goal-hud-dist">0m / 10.000m</span>
+          </div>
+        `;
+        document.body.appendChild(goalHud);
+      }
+      goalHud.style.display = 'flex';
+
       let cashoutBtnContainer = document.getElementById('btn-cashout-container');
       if (!cashoutBtnContainer) {
         cashoutBtnContainer = document.createElement('div');
@@ -692,6 +714,8 @@
     hideCashoutHUD() {
       const hud = document.getElementById('wager-hud');
       if (hud) hud.style.display = 'none';
+      const goalHud = document.getElementById('wager-goal-hud');
+      if (goalHud) goalHud.style.display = 'none';
       const btn = document.getElementById('btn-cashout-container');
       if (btn) btn.style.display = 'none';
     },
@@ -722,25 +746,42 @@
           if (profitEl) profitEl.textContent = this.formatBRL(currentProfitCents);
 
           const isInfluencer = Boolean(this.user?.is_influencer);
-          const minMeters = window.__cashoutMinDistance || 2000;
+          const minMeters = window.__cashoutMinDistance || 10000;
           const canCashout = isInfluencer || (currentDist >= minMeters);
           const cashoutBtn = document.getElementById('btn-cashout');
+
+          // Atualiza o HUD de Meta no canto superior direito
+          const goalTitle = document.getElementById('goal-hud-title');
+          const goalDist = document.getElementById('goal-hud-dist');
+          const goalFill = document.getElementById('goal-hud-fill');
+          if (goalTitle && goalDist && goalFill) {
+            if (isInfluencer) {
+              goalTitle.innerHTML = '⭐ MODO INFLUENCER';
+              goalDist.innerHTML = 'LIBERADO • RESGATE LIVRE';
+              goalFill.style.width = '100%';
+            } else {
+              const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} KM` : `${minMeters}M`;
+              const remaining = Math.max(0, minMeters - Math.floor(currentDist));
+              const pct = Math.min(100, Math.max(0, (currentDist / minMeters) * 100));
+              goalTitle.innerHTML = `🎯 META: ${kmLabel}`;
+              goalDist.innerHTML = `${Math.floor(currentDist)}m / ${minMeters}m (Faltam ${remaining}m)`;
+              goalFill.style.width = `${pct.toFixed(1)}%`;
+            }
+          }
 
           if (cashoutLabel && cashoutBtn) {
             if (canCashout) {
               cashoutBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
               cashoutBtn.style.opacity = '1';
-              cashoutBtn.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
-              cashoutBtn.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+              cashoutBtn.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.5)';
+              cashoutBtn.style.border = '2px solid rgba(255, 255, 255, 0.7)';
               cashoutLabel.innerHTML = `💰 RESGATAR ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x)`;
             } else {
               cashoutBtn.style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
               cashoutBtn.style.opacity = '0.96';
               cashoutBtn.style.boxShadow = '0 0 15px rgba(0, 0, 0, 0.6)';
               cashoutBtn.style.border = '2px solid rgba(255, 209, 102, 0.4)';
-              const remaining = Math.max(0, minMeters - Math.floor(currentDist));
-              const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} KM` : `${minMeters}M`;
-              cashoutLabel.innerHTML = `🔒 LUCRANDO ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x) • META: ${kmLabel} (FALTAM ${remaining}m)`;
+              cashoutLabel.innerHTML = `🔒 ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x)`;
             }
           }
         }
@@ -756,13 +797,13 @@
 
       const isInfluencer = Boolean(this.user?.is_influencer);
       const currentDist = (window.__qt && window.__qt.distance != null) ? window.__qt.distance : (this.activeWager.distance || 0);
-      const minMeters = window.__cashoutMinDistance || 2000;
+      const minMeters = window.__cashoutMinDistance || 10000;
 
       if (!isInfluencer && currentDist < minMeters) {
         const remaining = Math.max(0, minMeters - Math.floor(currentDist));
         const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} km` : `${minMeters} metros`;
         const currentProfitCents = Math.floor(this.activeWager.betAmount * this.activeWager.multiplier);
-        this.showToast(`🔒 Resgate bloqueado! Você está lucrando ${this.formatBRL(currentProfitCents)}, mas a meta de resgate é ${kmLabel}. Faltam ${remaining} metros!`);
+        this.showToast(`🔒 Resgate bloqueado! Percorra a meta de ${kmLabel} (${minMeters}m) sem bater para liberar o saque. Faltam ${remaining} metros!`);
         return;
       }
 
