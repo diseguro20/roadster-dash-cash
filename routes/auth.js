@@ -27,7 +27,7 @@ router.get('/me', verifyAuth, async (req, res) => {
     is_influencer: Boolean(user.is_influencer),
     is_guest: false,
     difficulty: store.settings.difficulty || 'hard',
-    cashoutMinDistance: store.settings.cashoutMinDistance || 10000
+    cashoutMinDistance: store.settings.cashoutMinDistance || 2000
   });
 });
 

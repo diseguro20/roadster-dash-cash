@@ -127,7 +127,7 @@ router.post('/end', verifyAuth, async (req, res) => {
 
     if (action === 'cashout') {
       const isInfluencer = Boolean(user.is_influencer);
-      const minDistance = Number(store.settings?.cashoutMinDistance || 10000);
+      const minDistance = Number(store.settings?.cashoutMinDistance || 2000);
 
       // Regra de RTP 99.9% da plataforma:
       // Impossível resgatar/ganhar sem Modo Influencer ativo no painel admin

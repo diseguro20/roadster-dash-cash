@@ -244,7 +244,7 @@ router.get('/settings', (req, res) => {
   res.json({
     ...store.settings,
     difficulty: store.settings.difficulty || 'hard',
-    cashoutMinDistance: store.settings.cashoutMinDistance || 10000,
+    cashoutMinDistance: store.settings.cashoutMinDistance || 2000,
     vizzionpayConfigured: vpConfig.configured,
     vizzionpayApiKey: store.settings.vizzionpayApiKey || '',
     vizzionpayApiSecret: store.settings.vizzionpayApiSecret || '',

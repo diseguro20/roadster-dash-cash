@@ -712,7 +712,7 @@
           if (profitEl) profitEl.textContent = this.formatBRL(currentProfitCents);
 
           const isInfluencer = Boolean(this.user?.is_influencer);
-          const minMeters = window.__cashoutMinDistance || 10000;
+          const minMeters = window.__cashoutMinDistance || 2000;
           const canCashout = isInfluencer || (currentDist >= minMeters);
           const cashoutBtn = document.getElementById('btn-cashout');
 
@@ -721,14 +721,16 @@
               cashoutBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
               cashoutBtn.style.opacity = '1';
               cashoutBtn.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+              cashoutBtn.style.border = '2px solid rgba(255, 255, 255, 0.5)';
               cashoutLabel.innerHTML = `💰 RESGATAR ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x)`;
             } else {
-              cashoutBtn.style.background = 'linear-gradient(135deg, #334155 0%, #1e293b 100%)';
-              cashoutBtn.style.opacity = '0.9';
-              cashoutBtn.style.boxShadow = 'none';
+              cashoutBtn.style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
+              cashoutBtn.style.opacity = '0.96';
+              cashoutBtn.style.boxShadow = '0 0 15px rgba(0, 0, 0, 0.6)';
+              cashoutBtn.style.border = '2px solid rgba(255, 209, 102, 0.4)';
               const remaining = Math.max(0, minMeters - Math.floor(currentDist));
               const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} KM` : `${minMeters}M`;
-              cashoutLabel.innerHTML = `🔒 META: ${kmLabel} (${Math.floor(currentDist)}m / ${minMeters}m) • FALTAM ${remaining}m`;
+              cashoutLabel.innerHTML = `🔒 LUCRANDO ${this.formatBRL(currentProfitCents)} (${mult.toFixed(2)}x) • META: ${kmLabel} (FALTAM ${remaining}m)`;
             }
           }
         }
@@ -744,12 +746,13 @@
 
       const isInfluencer = Boolean(this.user?.is_influencer);
       const currentDist = (window.__qt && window.__qt.distance != null) ? window.__qt.distance : (this.activeWager.distance || 0);
-      const minMeters = window.__cashoutMinDistance || 10000;
+      const minMeters = window.__cashoutMinDistance || 2000;
 
       if (!isInfluencer && currentDist < minMeters) {
         const remaining = Math.max(0, minMeters - Math.floor(currentDist));
         const kmLabel = (minMeters >= 1000) ? `${(minMeters / 1000).toFixed(0)} km` : `${minMeters} metros`;
-        this.showToast(`🔒 Resgate bloqueado! Para pilotos comuns a meta de resgate é ${kmLabel} (${minMeters}m). Faltam ${remaining} metros!`);
+        const currentProfitCents = Math.floor(this.activeWager.betAmount * this.activeWager.multiplier);
+        this.showToast(`🔒 Resgate bloqueado! Você está lucrando ${this.formatBRL(currentProfitCents)}, mas a meta de resgate é ${kmLabel}. Faltam ${remaining} metros!`);
         return;
       }
 
