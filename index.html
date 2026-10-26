@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -7,30 +7,34 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Roadster Dash" />
+  <meta name="apple-mobile-web-app-title" content="Tesla Cash" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Roadster Dash</title>
-  <meta name="description" content="Jump, barrel roll and boost through traffic in Roadster Dash. Play instantly in your browser on mobile or desktop and challenge the global TOP 100." />
+  <title>Tesla Cash 🏎️💨 | Dobre seu Saldo com 100% de Bônus!</title>
+  <meta name="description" content="🏎️💨 Pilote o Roadster, desvie do tráfego e resgate lucros reais no PIX! Cadastre-se e ganhe +100% DE BÔNUS no primeiro depósito a partir de R$ 50!" />
   <meta name="robots" content="index, follow, max-image-preview:large" />
-  <meta name="author" content="Taejoo Um" />
-  <link rel="canonical" href="https://roadsterdash.com/" />
+  <link rel="canonical" href="https://teslacash.vercel.app/" />
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/roadster-model-192.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/roadster-model-apple-touch.png" />
+
+  <!-- Open Graph / WhatsApp / Facebook / Telegram -->
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Roadster Dash" />
-  <meta property="og:title" content="Roadster Dash" />
-  <meta property="og:description" content="Jump, barrel roll and boost through traffic. Play free in your browser and challenge the global TOP 100." />
-  <meta property="og:url" content="https://roadsterdash.com/" />
-  <meta property="og:image" content="https://roadsterdash.com/social-card.jpg?v=20261022" />
+  <meta property="og:site_name" content="Tesla Cash" />
+  <meta property="og:title" content="🏎️💨 Tesla Cash | Ganhe 100% de Bônus no 1º Depósito!" />
+  <meta property="og:description" content="⚡ Pilote em alta velocidade, desvie do tráfego e saque lucros reais no PIX! Deposite a partir de R$ 50 e receba +100% DE BÔNUS (Dobre seu saldo)! Cadastre-se e jogue agora!" />
+  <meta property="og:url" content="https://teslacash.vercel.app/" />
+  <meta property="og:image" content="https://teslacash.vercel.app/social-card.jpg" />
+  <meta property="og:image:secure_url" content="https://teslacash.vercel.app/social-card.jpg" />
   <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Roadster Dash: the rear of a pearl-white roadster on a launch pad at sunset" />
+  <meta property="og:image:alt" content="Tesla Cash - Jogo de Corrida com Lucro Real e 100% de Bônus" />
+
+  <!-- Twitter / X -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Roadster Dash" />
-  <meta name="twitter:description" content="Jump, barrel roll and boost through traffic. Play free in your browser and challenge the global TOP 100." />
-  <meta name="twitter:image" content="https://roadsterdash.com/social-card.jpg?v=20261022" />
-  <meta name="twitter:image:alt" content="Roadster Dash: the rear of a pearl-white roadster on a launch pad at sunset" />
+  <meta name="twitter:title" content="🏎️💨 Tesla Cash | Ganhe 100% de Bônus no 1º Depósito!" />
+  <meta name="twitter:description" content="⚡ Pilote em alta velocidade, desvie do tráfego e saque lucros reais no PIX! Deposite a partir de R$ 50 e receba +100% DE BÔNUS (Dobre seu saldo)! Cadastre-se e jogue agora!" />
+  <meta name="twitter:image" content="https://teslacash.vercel.app/social-card.jpg" />
+  <meta name="twitter:image:alt" content="Tesla Cash - Dobre seu Saldo com 100% de Bônus" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -271,6 +275,10 @@
             🏁 Desvie dos veículos no tráfego para subir seu multiplicador. Aperte <b>TECLA C</b> ou toque no botão para resgatar seus lucros a qualquer momento!
           </div>
         </div>
+        <!-- Botão CTA de Compartilhar / Convidar no WhatsApp -->
+        <button class="btn-share-lobby" onclick="WagerEngine.shareWhatsApp()" style="width: 100%; background: linear-gradient(135deg, rgba(37, 211, 102, 0.15) 0%, rgba(18, 140, 126, 0.25) 100%); border: 1.5px solid #25D366; color: #25D366; padding: 11px 16px; border-radius: 12px; font-weight: 800; font-size: 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-family: 'Rajdhani', sans-serif; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.25); transition: all 0.2s;">
+          <span style="font-size: 18px;">📲</span> <span>COMPARTILHAR NO WHATSAPP • BÔNUS 100%</span>
+        </button>
         <button id="play-btn" class="primary" style="display: none;"><span data-i18n="menu.play">PLAY</span> <span class="hint">SPACE</span></button>
         <div class="menu-row">
           <button id="settings-btn" class="ghost" data-i18n="menu.settings"></button>
@@ -306,7 +314,7 @@
             <button id="retry-btn" class="primary"><span data-i18n="go.retry"></span> <span class="hint">SPACE</span></button>
             <button id="go-menu-btn" class="ghost" data-i18n="go.menu"></button>
           </div>
-          <button id="share-btn" class="ghost share-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 12v8h14v-8"/></svg><span data-i18n="go.share">SHARE</span></button>
+          <button id="share-btn" class="ghost share-btn" onclick="WagerEngine.shareWhatsApp()" style="border-color: #25D366; color: #25D366; display: flex; align-items: center; justify-content: center; gap: 8px;"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" style="width: 18px; height: 18px;"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg><span>COMPARTILHAR NO WHATSAPP (+100% BÔNUS)</span></button>
         </div>
       </div>
     </div>

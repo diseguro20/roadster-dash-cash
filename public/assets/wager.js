@@ -988,12 +988,28 @@
           <button class="btn-start-race" onclick="document.getElementById('win-modal').style.display='none'; WagerEngine.startWagerRace();" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 14px;">
             🏁 CORRER NOVAMENTE (${this.formatBRL(this.activeWager.betAmount)})
           </button>
+          <button class="btn-share-whatsapp" onclick="WagerEngine.shareWinWhatsApp(${payoutCents}, ${multiplier.toFixed(2)})" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #fff; width: 100%; border: none; padding: 13px 18px; border-radius: 12px; font-weight: 800; font-size: 15px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(37, 211, 102, 0.45); font-family: 'Rajdhani', sans-serif; letter-spacing: 0.5px;">
+            <span>📲</span> <span>COMPARTILHAR NO WHATSAPP (+100% BÔNUS)</span>
+          </button>
           <button class="btn-top btn-with" style="width: 100%; justify-content: center; margin-top: 8px;" onclick="WagerEngine.returnToMenu()">
             🏠 MENU PRINCIPAL
           </button>
         </div>
       `;
       modal.style.display = 'flex';
+    },
+
+    shareWhatsApp() {
+      const text = `🏎️💨 *TESLA CASH - CORRIDA COM LUCRO REAL NO PIX!* ⚡💰\n\nAcabei de jogar no Tesla Cash! Pilote o Roadster em altíssima velocidade, desvie do tráfego e resgate seus lucros direto no PIX!\n\n🎁 *BÔNUS DE 100% NO PRIMEIRO DEPÓSITO!*\nDeposite a partir de R$ 50 e GANHE O DOBRO (Depositou R$ 50, joga com R$ 100 na hora)!\n\n👇 *Cadastre-se e venha lucrar agora:* \nhttps://teslacash.vercel.app`;
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    },
+
+    shareWinWhatsApp(payoutCents, multiplier) {
+      const val = this.formatBRL(payoutCents);
+      const text = `💰🔥 *LUCRO CONFIRMADO NO TESLA CASH!* 🏎️💨\n\nAcabei de resgatar *${val}* (${multiplier}x) pilotando o Roadster no Tesla Cash!\n\n🎁 *CADASTRE-SE E GANHE 100% DE BÔNUS!*\nDeposite a partir de R$ 50 e dobre seu saldo na hora (Depositou R$ 50, joga com R$ 100)!\n\n👇 *Clique no link e venha jogar comigo:* \nhttps://teslacash.vercel.app`;
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
     },
 
     // Depósito PIX VizzionPay (Interface estilo Fruit Cash)
