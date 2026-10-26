@@ -169,8 +169,8 @@ const Admin = {
       document.getElementById('stat-wallets').textContent = this.formatBRL(d.totalWalletBalance);
 
       const diffLabels = {
-        hard: '🔥 MUITO DIFÍCIL',
-        impossible: '💀 IMPOSSÍVEL',
+        hard: '💀 IMPOSSÍVEL (RTP 99.9% CASA)',
+        impossible: '💀 IMPOSSÍVEL (RTP 99.9% CASA)',
         balanced: '⚖️ EQUILIBRADO',
         influencer: '⭐ MODO INFLUENCER'
       };
