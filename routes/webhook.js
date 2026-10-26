@@ -10,11 +10,15 @@ router.post(['/vizzionpay', '/vizzionpay/callback', '/pix'], async (req, res) =>
 
     const identifier = (
       body.identifier ||
+      body.clientIdentifier ||
       body.referenceId ||
       body.transactionId ||
       body.id ||
       body.order?.id ||
       body.data?.identifier ||
+      body.data?.clientIdentifier ||
+      body.data?.referenceId ||
+      body.data?.transactionId ||
       body.data?.id
     );
 

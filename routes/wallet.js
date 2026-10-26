@@ -86,21 +86,40 @@ router.post('/deposit', verifyAuth, async (req, res) => {
 router.get('/check-deposit/:id', verifyAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const dep = store.deposits.find(d => d.id === id || d.transactionId === id);
+    let dep = store.deposits.find(d => d.id === id || d.transactionId === id);
+
+    if (!dep && firebaseInitialized && db) {
+      try {
+        let snap = await db.collection('deposits').doc(String(id)).get();
+        if (snap.exists) {
+          dep = { id: snap.id, ...snap.data() };
+        } else {
+          const qSnap = await db.collection('deposits').where('transactionId', '==', String(id)).limit(1).get();
+          if (!qSnap.empty) {
+            dep = { id: qSnap.docs[0].id, ...qSnap.docs[0].data() };
+          }
+        }
+        if (dep) {
+          const idx = store.deposits.findIndex(d => d.id === dep.id);
+          if (idx !== -1) store.deposits[idx] = dep;
+          else store.deposits.unshift(dep);
+        }
+      } catch (_) {}
+    }
 
     if (!dep) {
       return res.status(404).json({ error: 'Depósito não encontrado.' });
     }
 
     if (dep.status === 'approved') {
-      const user = req.user;
+      const user = await getUserFresh(dep.uid);
       return res.json({
         status: 'approved',
         amount: dep.amount,
         bonusAmount: dep.bonusAmount,
-        balance: user.balance,
-        cash_balance: user.cash_balance,
-        bonus_balance: user.bonus_balance
+        balance: user?.balance || 0,
+        cash_balance: user?.cash_balance || 0,
+        bonus_balance: user?.bonus_balance || 0
       });
     }
 
@@ -108,14 +127,14 @@ router.get('/check-deposit/:id', verifyAuth, async (req, res) => {
     const vpStatus = await checkVizzionPayStatus(dep.transactionId || dep.id);
     if (vpStatus && vpStatus.status === 'approved') {
       await approveDepositAndCreditUser(dep.id);
-      const user = req.user;
+      const user = await getUserFresh(dep.uid);
       return res.json({
         status: 'approved',
         amount: dep.amount,
         bonusAmount: dep.bonusAmount,
-        balance: user.balance,
-        cash_balance: user.cash_balance,
-        bonus_balance: user.bonus_balance
+        balance: user?.balance || 0,
+        cash_balance: user?.cash_balance || 0,
+        bonus_balance: user?.bonus_balance || 0
       });
     }
 

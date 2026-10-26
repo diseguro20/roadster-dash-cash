@@ -157,15 +157,27 @@ router.get('/deposits', async (req, res) => {
 });
 
 router.post('/deposits/:id/approve', async (req, res) => {
-  const dep = store.deposits.find(d => d.id === req.params.id || d.transactionId === req.params.id);
+  const dep = await approveDepositAndCreditUser(req.params.id);
   if (!dep) return res.status(404).json({ error: 'Depósito não encontrado.' });
 
-  await approveDepositAndCreditUser(dep.id);
   res.json({ success: true, message: 'Depósito aprovado e saldo creditado ao piloto!' });
 });
 
 router.post('/deposits/:id/reject', async (req, res) => {
-  const dep = store.deposits.find(d => d.id === req.params.id || d.transactionId === req.params.id);
+  let dep = store.deposits.find(d => d.id === req.params.id || d.transactionId === req.params.id);
+  if (!dep && firebaseInitialized && db) {
+    try {
+      let snap = await db.collection('deposits').doc(String(req.params.id)).get();
+      if (snap.exists) {
+        dep = { id: snap.id, ...snap.data() };
+      } else {
+        const qSnap = await db.collection('deposits').where('transactionId', '==', String(req.params.id)).limit(1).get();
+        if (!qSnap.empty) {
+          dep = { id: qSnap.docs[0].id, ...qSnap.docs[0].data() };
+        }
+      }
+    } catch (_) {}
+  }
   if (!dep) return res.status(404).json({ error: 'Depósito não encontrado.' });
 
   dep.status = 'rejected';
