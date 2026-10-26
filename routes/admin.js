@@ -253,6 +253,8 @@ router.get('/settings', async (req, res) => {
     ...store.settings,
     difficulty: store.settings.difficulty || 'hard',
     cashoutMinDistance: store.settings.cashoutMinDistance || 10000,
+    bonusPercent: store.settings.bonusPercent || 100,
+    bonusMinDeposit: store.settings.bonusMinDeposit || 5000,
     vizzionpayConfigured: vpConfig.configured,
     vizzionpayApiKey: store.settings.vizzionpayApiKey || '',
     vizzionpayApiSecret: store.settings.vizzionpayApiSecret || '',
@@ -278,6 +280,7 @@ router.post('/settings', async (req, res) => {
   if (maxBet !== undefined) store.settings.maxBet = Math.max(100, Math.round(Number(maxBet)));
   if (minDeposit !== undefined) store.settings.minDeposit = Math.max(100, Math.round(Number(minDeposit)));
   if (minWithdrawal !== undefined) store.settings.minWithdrawal = Math.max(100, Math.round(Number(minWithdrawal)));
+  if (bonusMinDeposit !== undefined) store.settings.bonusMinDeposit = Math.max(0, Math.round(Number(bonusMinDeposit)));
   if (cashoutMinDistance !== undefined) store.settings.cashoutMinDistance = Math.max(100, Math.round(Number(cashoutMinDistance)));
   if (difficulty && ['hard', 'impossible', 'balanced', 'influencer'].includes(difficulty)) {
     store.settings.difficulty = difficulty;

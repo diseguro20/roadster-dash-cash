@@ -34,7 +34,7 @@ router.post('/deposit', verifyAuth, async (req, res) => {
 
     const depositId = `dep_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const bonusPercent = Number(store.settings.bonusPercent || 100);
-    const bonusMin = Number(store.settings.bonusMinDeposit || 2000);
+    const bonusMin = Number(store.settings.bonusMinDeposit || 5000);
     const bonusAmount = amount >= bonusMin ? Math.floor((amount * bonusPercent) / 100) : 0;
 
     const pixData = await createVizzionPayPix({

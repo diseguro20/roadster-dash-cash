@@ -403,6 +403,8 @@ const Admin = {
       if (s.maxBet) document.getElementById('set-max-bet').value = (s.maxBet / 100).toFixed(2);
       if (s.minDeposit) document.getElementById('set-min-dep').value = (s.minDeposit / 100).toFixed(2);
       if (s.minWithdrawal) document.getElementById('set-min-with').value = (s.minWithdrawal / 100).toFixed(2);
+      const bonusMinEl = document.getElementById('set-bonus-min');
+      if (bonusMinEl) bonusMinEl.value = ((s.bonusMinDeposit || 5000) / 100).toFixed(2);
       if (s.vizzionpayApiKey) document.getElementById('set-vp-key').value = s.vizzionpayApiKey;
       if (s.vizzionpayApiSecret) document.getElementById('set-vp-secret').value = s.vizzionpayApiSecret;
       if (s.vizzionpayWebhookUrl) document.getElementById('set-vp-webhook').value = s.vizzionpayWebhookUrl;
@@ -447,6 +449,7 @@ const Admin = {
     const maxBet = Math.round(parseFloat(document.getElementById('set-max-bet').value || '500') * 100);
     const minDeposit = Math.round(parseFloat(document.getElementById('set-min-dep').value || '20') * 100);
     const minWithdrawal = Math.round(parseFloat(document.getElementById('set-min-with').value || '10') * 100);
+    const bonusMinDeposit = Math.round(parseFloat(document.getElementById('set-bonus-min')?.value || '50') * 100);
     const cashoutMinDistance = parseInt(document.getElementById('set-cashout-dist').value || '10000', 10);
     const difficulty = document.getElementById('set-difficulty').value;
     const vizzionpayApiKey = document.getElementById('set-vp-key').value.trim();
@@ -461,6 +464,7 @@ const Admin = {
           maxBet,
           minDeposit,
           minWithdrawal,
+          bonusMinDeposit,
           cashoutMinDistance,
           difficulty,
           vizzionpayApiKey,

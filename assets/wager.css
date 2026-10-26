@@ -1091,6 +1091,18 @@
   margin-top: 2px;
 }
 
+.fruit-val-card .f-bonus.no-bonus {
+  color: #94a3b8;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.fruit-val-card .f-bonus.active-bonus {
+  color: #34d399;
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
 .fruit-val-card .f-badge {
   position: absolute;
   top: -7px;

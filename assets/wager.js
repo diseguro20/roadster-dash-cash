@@ -1026,9 +1026,12 @@
 
           <!-- Banner de Bônus 100% estilo Fruit -->
           <div class="fruit-bonus-banner">
-            <div class="bonus-tag-pill">🎁 BÔNUS DE 100% LIBERADO</div>
-            <div class="bonus-headline">DOBRE SEU SALDO NO PRIMEIRO DEPÓSITO!</div>
-            <div class="bonus-desc">Deposite a partir de R$ 20 e receba 100% de bônus imediato para jogar e lucrar!</div>
+            <div class="bonus-tag-pill" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">🎁 BÔNUS DE 100% (A PARTIR DE R$ 50)</div>
+            <div class="bonus-headline">DOBRE SEU SALDO A PARTIR DE R$ 50!</div>
+            <div class="bonus-desc">
+              Depósitos de <b>R$ 50 ou mais</b> ativam <b>+100% de bônus imediato</b> para dobrar suas chances de lucrar!
+              <span style="display: block; margin-top: 4px; color: #f87171; font-size: 10.5px;">* Depósitos de R$ 20 a R$ 49 são creditados com saldo normal (sem bônus).</span>
+            </div>
           </div>
 
           <div class="deposit-section-label">SELECIONE O VALOR DO DEPÓSITO:</div>
@@ -1037,30 +1040,30 @@
           <div class="fruit-values-grid">
             <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(20, this)">
               <span class="f-val">R$ 20</span>
-              <span class="f-bonus">+ R$ 20 BÔNUS</span>
+              <span class="f-bonus no-bonus">SEM BÔNUS</span>
             </div>
             <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(30, this)">
               <span class="f-val">R$ 30</span>
-              <span class="f-bonus">+ R$ 30 BÔNUS</span>
+              <span class="f-bonus no-bonus">SEM BÔNUS</span>
             </div>
             <div class="fruit-val-card active" onclick="WagerEngine.setFruitDepAmount(50, this)">
-              <span class="f-badge">MAIS ESCOLHIDO</span>
+              <span class="f-badge">⭐ DOBRA SEU SALDO</span>
               <span class="f-val">R$ 50</span>
-              <span class="f-bonus">+ R$ 50 BÔNUS</span>
+              <span class="f-bonus active-bonus">+ R$ 50 BÔNUS</span>
             </div>
             <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(100, this)">
               <span class="f-badge hot">🔥 POPULAR</span>
               <span class="f-val">R$ 100</span>
-              <span class="f-bonus">+ R$ 100 BÔNUS</span>
+              <span class="f-bonus active-bonus">+ R$ 100 BÔNUS</span>
             </div>
             <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(200, this)">
               <span class="f-val">R$ 200</span>
-              <span class="f-bonus">+ R$ 200 BÔNUS</span>
+              <span class="f-bonus active-bonus">+ R$ 200 BÔNUS</span>
             </div>
             <div class="fruit-val-card" onclick="WagerEngine.setFruitDepAmount(500, this)">
-              <span class="f-badge vip">⭐ VIP</span>
+              <span class="f-badge vip">👑 VIP</span>
               <span class="f-val">R$ 500</span>
-              <span class="f-bonus">+ R$ 500 BÔNUS</span>
+              <span class="f-bonus active-bonus">+ R$ 500 BÔNUS</span>
             </div>
           </div>
 
@@ -1071,12 +1074,15 @@
               <span class="wager-currency">R$</span>
               <input type="number" id="dep-val-input" class="wager-input" value="50" min="20" step="5" oninput="WagerEngine.onFruitCustomInput(this.value)" />
             </div>
+            <div id="bonus-helper-tip" style="font-size: 11.5px; margin-top: 6px; font-weight: 700; color: #34d399;">
+              🎉 <b>BÔNUS DE 100% ATIVADO!</b> Você vai receber +R$ 50,00 e jogar com <b>R$ 100,00</b>!
+            </div>
           </div>
 
           <!-- Botão Chamativo de Ação Estilo Fruit -->
           <button class="btn-deposit-fruit" id="btn-gen-pix" onclick="WagerEngine.generatePixDeposit()">
             <span class="btn-fruit-bolt">⚡</span>
-            <span id="btn-fruit-text">DEPOSITAR R$ 50,00 (+ R$ 50,00 BÔNUS)</span>
+            <span id="btn-fruit-text">DEPOSITAR R$ 50,00 (+ R$ 50,00 BÔNUS = R$ 100,00)</span>
           </button>
 
           <!-- Badges de Segurança -->
@@ -1107,11 +1113,26 @@
 
     updateFruitDepositBtn(val) {
       const btnText = document.getElementById('btn-fruit-text');
-      if (!btnText) return;
+      const helper = document.getElementById('bonus-helper-tip');
       const num = Math.max(0, Number(val) || 0);
       const formatted = this.formatBRL(num * 100);
-      const bonusFormatted = this.formatBRL(num * 100);
-      btnText.textContent = `DEPOSITAR ${formatted} (+ ${bonusFormatted} BÔNUS)`;
+
+      if (num >= 50) {
+        const bonusFormatted = this.formatBRL(num * 100);
+        const totalFormatted = this.formatBRL(num * 200);
+        if (btnText) btnText.textContent = `DEPOSITAR ${formatted} (+ ${bonusFormatted} BÔNUS = ${totalFormatted})`;
+        if (helper) {
+          helper.style.color = '#34d399';
+          helper.innerHTML = `🎉 <b>BÔNUS DE 100% ATIVADO!</b> Você vai receber +${bonusFormatted} e jogar com <b>${totalFormatted}</b>!`;
+        }
+      } else {
+        if (btnText) btnText.textContent = `DEPOSITAR ${formatted} (SEM BÔNUS)`;
+        if (helper) {
+          const falta = (50 - num).toFixed(2).replace('.', ',');
+          helper.style.color = '#f59e0b';
+          helper.innerHTML = `💡 <b>Atenção:</b> Bônus de 100% a partir de R$ 50! Faltam R$ ${falta} para DOBRAR seu saldo.`;
+        }
+      }
     },
 
     setDepAmount(val, btn) {
