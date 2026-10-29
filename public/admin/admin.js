@@ -472,6 +472,10 @@ const Admin = {
       if (s.vizzionpayApiKey) document.getElementById('set-vp-key').value = s.vizzionpayApiKey;
       if (s.vizzionpayApiSecret) document.getElementById('set-vp-secret').value = s.vizzionpayApiSecret;
       if (s.vizzionpayWebhookUrl) document.getElementById('set-vp-webhook').value = s.vizzionpayWebhookUrl;
+      if (s.amplopayApiKey && document.getElementById('set-ap-key')) document.getElementById('set-ap-key').value = s.amplopayApiKey;
+      if (s.amplopayApiSecret && document.getElementById('set-ap-secret')) document.getElementById('set-ap-secret').value = s.amplopayApiSecret;
+      if (s.amplopayWebhookUrl && document.getElementById('set-ap-webhook')) document.getElementById('set-ap-webhook').value = s.amplopayWebhookUrl;
+      if (s.amploPercent !== undefined && document.getElementById('set-ap-percent')) document.getElementById('set-ap-percent').value = s.amploPercent;
     } catch (_) {}
   },
 
@@ -519,6 +523,10 @@ const Admin = {
     const vizzionpayApiKey = document.getElementById('set-vp-key').value.trim();
     const vizzionpayApiSecret = document.getElementById('set-vp-secret').value.trim();
     const vizzionpayWebhookUrl = document.getElementById('set-vp-webhook').value.trim();
+    const amplopayApiKey = document.getElementById('set-ap-key')?.value.trim() || '';
+    const amplopayApiSecret = document.getElementById('set-ap-secret')?.value.trim() || '';
+    const amplopayWebhookUrl = document.getElementById('set-ap-webhook')?.value.trim() || '';
+    const amploPercent = Number(document.getElementById('set-ap-percent')?.value || '40');
 
     try {
       await this.api('/api/admin/settings', {
@@ -533,7 +541,11 @@ const Admin = {
           difficulty,
           vizzionpayApiKey,
           vizzionpayApiSecret,
-          vizzionpayWebhookUrl
+          vizzionpayWebhookUrl,
+          amplopayApiKey,
+          amplopayApiSecret,
+          amplopayWebhookUrl,
+          amploPercent
         })
       });
       alert('Configurações da plataforma salvas com sucesso em tempo real!');

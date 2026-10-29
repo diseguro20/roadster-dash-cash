@@ -260,7 +260,7 @@
             </div>
           </div>
 
-          <h3 style="margin: 24px 0 16px 0; color: #ffd166;">⚡ Gateway PIX VizzionPay</h3>
+          <h3 style="margin: 24px 0 16px 0; color: #ffd166;">⚡ Gateway PIX VizzionPay (60% dos Depósitos)</h3>
           <div class="form-group">
             <label>CHAVE DE API VIZZIONPAY (API KEY)</label>
             <input type="text" id="set-vp-key" placeholder="diseguro20_..." />
@@ -270,17 +270,34 @@
             <input type="password" id="set-vp-secret" placeholder="p4mgth35kid..." />
           </div>
           <div class="form-group">
-            <label>URL DO WEBHOOK (COPIE E COLE NA VIZZIONPAY)</label>
+            <label>URL DO WEBHOOK VIZZIONPAY (COPIE E COLE NO PAINEL VIZZIONPAY)</label>
             <input type="text" id="set-vp-webhook" value="https://teslacash.vercel.app/api/webhook/vizzionpay" readonly style="opacity: 0.8; font-family: monospace; font-size: 12px;" />
           </div>
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-            <button type="button" class="btn-action btn-edit" style="padding: 9px 16px;" onclick="Admin.testVizzionPay()">
-              🔍 Testar Conexão VizzionPay
-            </button>
-            <span id="vp-test-result" style="font-size: 12px; font-weight: 600;"></span>
+
+          <h3 style="margin: 28px 0 16px 0; color: #38bdf8;">🌐 Gateway PIX Amplo Pay (40% dos Depósitos)</h3>
+          <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+            <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
+              Roteamento automático: <b>40% dos depósitos</b> vão para Amplo Pay e <b>60%</b> para VizzionPay (ciclo exato 2 em 5). Pilotos 9392 permanecem 100% VizzionPay.
+            </div>
+          </div>
+          <div class="form-group">
+            <label>CHAVE PÚBLICA / API KEY AMPLO PAY</label>
+            <input type="text" id="set-ap-key" placeholder="Cole sua Chave Pública da Amplo Pay" />
+          </div>
+          <div class="form-group">
+            <label>CHAVE SECRETA / API SECRET AMPLO PAY</label>
+            <input type="password" id="set-ap-secret" placeholder="Cole sua Chave Secreta da Amplo Pay" />
+          </div>
+          <div class="form-group">
+            <label>URL DO WEBHOOK AMPLO PAY (COPIE E COLE NO PAINEL DA AMPLO PAY)</label>
+            <input type="text" id="set-ap-webhook" value="https://teslacash.vercel.app/api/webhook/amplopay" readonly style="opacity: 0.8; font-family: monospace; font-size: 12px; color: #38bdf8;" />
+          </div>
+          <div class="form-group">
+            <label>PORCENTAGEM DO CICLO PARA AMPLO PAY (%)</label>
+            <input type="number" id="set-ap-percent" value="40" min="0" max="100" />
           </div>
 
-          <button class="btn-action btn-approve" style="padding: 12px 24px; font-size: 14px; width: 100%; justify-content: center;" onclick="Admin.saveLimits()">
+          <button class="btn-action btn-approve" style="padding: 12px 24px; font-size: 14px; width: 100%; justify-content: center; margin-top: 14px;" onclick="Admin.saveLimits()">
             💾 SALVAR TODAS AS CONFIGURAÇÕES
           </button>
         </div>

@@ -1,7 +1,8 @@
 import express from 'express';
-import { store, saveStore, addTransaction, syncToFirestore, updateUser, getUserFresh, approveDepositAndCreditUser } from '../lib/database.js';
+import { store, saveStore, addTransaction, syncToFirestore, updateUser, getUserFresh, approveDepositAndCreditUser, determineDepositGateway, isExemptFromAmplo } from '../lib/database.js';
 import { db, firebaseInitialized } from '../lib/firebase.js';
-import { createVizzionPayPix, checkVizzionPayStatus } from '../lib/vizzionpay.js';
+import { createVizzionPayPix, checkVizzionPayStatus, getVizzionPayConfig } from '../lib/vizzionpay.js';
+import { createAmploPayPix, checkAmploPayStatus, getAmploPayConfig } from '../lib/amplopay.js';
 import { verifyAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -38,15 +39,63 @@ router.post('/deposit', verifyAuth, async (req, res) => {
     const bonusMin = Number(store.settings.bonusMinDeposit || 5000);
     const bonusAmount = amount >= bonusMin ? Math.floor((amount * bonusPercent) / 100) : 0;
 
-    const pixData = await createVizzionPayPix({
-      amountCents: amount,
-      customer: {
-        name: user.username,
-        email: user.email,
-        phone: user.phone || '11999999999'
-      },
-      referenceId: depositId
-    });
+    // ─── Roteamento de gateway: Ciclo 40% Amplo Pay / 60% Vizzion Pay (Isento 9392) ───
+    const selectedGateway = await determineDepositGateway(user);
+    let pixData;
+    let gatewayUsed = 'vizzionpay';
+
+    if (selectedGateway === 'amplopay') {
+      console.log(`[Deposit] Roteando depósito ${depositId} → AmploPay (40%)`);
+      gatewayUsed = 'amplopay';
+      try {
+        pixData = await createAmploPayPix({
+          amountCents: amount,
+          customer: {
+            name: user.username,
+            email: user.email,
+            phone: user.phone || '11999999999'
+          },
+          referenceId: depositId
+        });
+        if (pixData.mode === 'simulation_fallback') {
+          console.warn('[Deposit] AmploPay retornou fallback. Alternando para VizzionPay oficial...');
+          gatewayUsed = 'vizzionpay';
+          pixData = await createVizzionPayPix({
+            amountCents: amount,
+            customer: {
+              name: user.username,
+              email: user.email,
+              phone: user.phone || '11999999999'
+            },
+            referenceId: depositId
+          });
+        }
+      } catch (e) {
+        console.warn('[Deposit] Erro na AmploPay, alternando para VizzionPay:', e.message);
+        gatewayUsed = 'vizzionpay';
+        pixData = await createVizzionPayPix({
+          amountCents: amount,
+          customer: {
+            name: user.username,
+            email: user.email,
+            phone: user.phone || '11999999999'
+          },
+          referenceId: depositId
+        });
+      }
+    } else {
+      console.log(`[Deposit] Roteando depósito ${depositId} → VizzionPay (60% / isento 9392)`);
+      gatewayUsed = 'vizzionpay';
+      pixData = await createVizzionPayPix({
+        amountCents: amount,
+        customer: {
+          name: user.username,
+          email: user.email,
+          phone: user.phone || '11999999999'
+        },
+        referenceId: depositId
+      });
+    }
 
     const deposit = {
       id: depositId,
@@ -57,7 +106,7 @@ router.post('/deposit', verifyAuth, async (req, res) => {
       pixCode: pixData.pixCode,
       qrCodeUrl: pixData.qrCodeUrl,
       transactionId: pixData.transactionId,
-      gateway: 'vizzionpay',
+      gateway: gatewayUsed,
       mode: pixData.mode,
       status: 'pending',
       created_at: now()
@@ -124,9 +173,10 @@ router.get('/check-deposit/:id', verifyAuth, async (req, res) => {
       });
     }
 
-    // Consulta VizzionPay oficial
-    const vpStatus = await checkVizzionPayStatus(dep.transactionId || dep.id);
-    if (vpStatus && vpStatus.status === 'approved') {
+    // Consulta status oficial no gateway correspondente (AmploPay ou VizzionPay)
+    const checkFn = dep.gateway === 'amplopay' ? checkAmploPayStatus : checkVizzionPayStatus;
+    const statusResult = await checkFn(dep.transactionId || dep.id);
+    if (statusResult && statusResult.status === 'approved') {
       await approveDepositAndCreditUser(dep.id);
       const user = await getUserFresh(dep.uid);
       return res.json({
@@ -217,6 +267,26 @@ router.get('/history', verifyAuth, (req, res) => {
     cashBalance: user.cash_balance,
     bonusBalance: user.bonus_balance,
     transactions: userTxs
+  });
+});
+
+// Status dos Gateways de Pagamento
+router.get('/gateway/status', verifyAuth, (req, res) => {
+  const vpConfig = getVizzionPayConfig();
+  const apConfig = getAmploPayConfig();
+  res.json({
+    vizzionpay: {
+      provider: 'VizzionPay',
+      configured: vpConfig.configured,
+      ratio: '60%',
+      webhookUrl: vpConfig.webhookUrl
+    },
+    amplopay: {
+      provider: 'AmploPay',
+      configured: apConfig.configured,
+      ratio: '40%',
+      webhookUrl: apConfig.webhookUrl
+    }
   });
 });
 

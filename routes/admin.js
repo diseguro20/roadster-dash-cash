@@ -5,6 +5,7 @@ import { store, saveStore, addTransaction, syncToFirestore, updateUser, getUserF
 import { db, firebaseInitialized } from '../lib/firebase.js';
 import { verifyAuth } from '../middleware/auth.js';
 import { getVizzionPayConfig } from '../lib/vizzionpay.js';
+import { getAmploPayConfig } from '../lib/amplopay.js';
 
 const router = express.Router();
 const now = () => new Date().toISOString();
@@ -257,6 +258,7 @@ router.delete('/users/:id', async (req, res) => {
 router.get('/settings', async (req, res) => {
   await loadSettingsFromFirestore();
   const vpConfig = getVizzionPayConfig();
+  const apConfig = getAmploPayConfig();
   res.json({
     ...store.settings,
     difficulty: store.settings.difficulty || 'hard',
@@ -266,7 +268,13 @@ router.get('/settings', async (req, res) => {
     vizzionpayConfigured: vpConfig.configured,
     vizzionpayApiKey: store.settings.vizzionpayApiKey || '',
     vizzionpayApiSecret: store.settings.vizzionpayApiSecret || '',
-    vizzionpayWebhookUrl: store.settings.vizzionpayWebhookUrl || ''
+    vizzionpayWebhookUrl: store.settings.vizzionpayWebhookUrl || '',
+    amplopayConfigured: apConfig.configured,
+    amplopayApiKey: store.settings.amplopayApiKey || '',
+    amplopayApiSecret: store.settings.amplopayApiSecret || '',
+    amplopayApiUrl: store.settings.amplopayApiUrl || 'https://app.amplopay.com',
+    amplopayWebhookUrl: store.settings.amplopayWebhookUrl || 'https://teslacash.vercel.app/api/webhook/amplopay',
+    amploPercent: Number(store.settings.amploPercent ?? 40)
   });
 });
 
@@ -281,6 +289,11 @@ router.post('/settings', async (req, res) => {
     vizzionpayApiKey,
     vizzionpayApiSecret,
     vizzionpayWebhookUrl,
+    amplopayApiKey,
+    amplopayApiSecret,
+    amplopayApiUrl,
+    amplopayWebhookUrl,
+    amploPercent,
     maintenance
   } = req.body;
 
@@ -296,6 +309,11 @@ router.post('/settings', async (req, res) => {
   if (vizzionpayApiKey !== undefined) store.settings.vizzionpayApiKey = String(vizzionpayApiKey).trim();
   if (vizzionpayApiSecret !== undefined) store.settings.vizzionpayApiSecret = String(vizzionpayApiSecret).trim();
   if (vizzionpayWebhookUrl !== undefined) store.settings.vizzionpayWebhookUrl = String(vizzionpayWebhookUrl).trim();
+  if (amplopayApiKey !== undefined) store.settings.amplopayApiKey = String(amplopayApiKey).trim();
+  if (amplopayApiSecret !== undefined) store.settings.amplopayApiSecret = String(amplopayApiSecret).trim();
+  if (amplopayApiUrl !== undefined) store.settings.amplopayApiUrl = String(amplopayApiUrl).trim();
+  if (amplopayWebhookUrl !== undefined) store.settings.amplopayWebhookUrl = String(amplopayWebhookUrl).trim();
+  if (amploPercent !== undefined) store.settings.amploPercent = Math.max(0, Math.min(100, Number(amploPercent)));
   if (maintenance !== undefined) store.settings.maintenance = Boolean(maintenance);
 
   saveStore();
